@@ -37,7 +37,15 @@ L’import utilise `curl` avec validation TLS conservée et échoue sur un tél�
 
 Le rapport source `public/data/image-report.json` résulte d’une vérification réseau complète et datée. Le rapport du cache local est dans `.local/image-cache-report.json`. Les images préparées sont conservées dans le snapshot cloud et copiées dans `dist/`. Elles sont ignorées par Git ; la compilation récupère automatiquement les images absentes avec vérification TLS et en-tête WebP. Leur disponibilité upstream n’est nécessaire que pour les télécharger ou les mettre à jour. Les noms anglais, français et les IDs sont recherchables. Le site de vérification Limitless est accessible depuis la fiche de chaque impression. Le dataset complémentaire flibustier a été consulté pour vérifier la structure set + numéro et les conventions ; il ne remplace pas le dataset v5 full.
 
-La CI vérifie chaque changement ; un workflow hebdomadaire prépare aussi un catalogue à jour et publie le build comme artifact à examiner. Il ne déploie pas et ne pousse pas automatiquement sur votre branche. Pour publier une mise à jour, récupérer/valider l’archive ou exécuter `data:update`, puis publier `dist/` avec l’hébergement choisi.
+La CI vérifie chaque changement. Sur `main`, le workflow publie aussi `dist/` sur GitHub Pages après validation. Chaque lundi, il prépare le catalogue à jour, vérifie les illustrations et republie le site. Les données actualisées sont disponibles dans les artifacts de la CI ; aucun commit automatique n’est créé. Les pull requests et les autres branches sont vérifiées sans publication.
+
+## Accéder au site avec GitHub Pages
+
+1. Ouvrir [Settings → Pages](https://github.com/nono-el-nino/POKEMON-TCGP/settings/pages), puis choisir **GitHub Actions** dans **Build and deployment → Source** (nécessite les droits de gestion du dépôt).
+2. Dans [Actions](https://github.com/nono-el-nino/POKEMON-TCGP/actions/workflows/validate.yml), attendre le succès de **Validate, refresh and publish**. Si la première tentative a échoué avant l’activation de Pages, utiliser **Re-run all jobs**, ou **Run workflow** sur `main`.
+3. L’adresse attendue est **https://nono-el-nino.github.io/POKEMON-TCGP/**. Le lien exact de publication apparaît aussi dans le job `deploy` et dans Settings → Pages. La première publication peut prendre quelques minutes.
+
+Aucune clé ni aucun secret à ajouter : le déploiement utilise le jeton temporaire de GitHub Actions avec les permissions `pages: write` et `id-token: write`. La publication ne peut aboutir tant que GitHub Pages n’est pas activé dans les paramètres du dépôt. Si Pages est indisponible pour la visibilité du dépôt et votre offre GitHub, utiliser un hébergeur statique compatible avec `dist/`.
 
 ## Choix explicites et sauvegarde
 
@@ -59,4 +67,4 @@ Code de cette première version et données v5 : **AGPL-3.0-or-later** (voir `LI
 
 Les données v5 de PocketDecks sont sous AGPL ; la référence flibustier est MIT, les noms PokéAPI BSD-3-Clause. Les notices complètes et licences des polices/icônes sont dans `public/licenses/`, également inclus dans `dist/`.
 
-**La licence du dataset ne couvre pas les illustrations Pokémon.** Elles restent la propriété de Nintendo, Creatures Inc., GAME FREAK Inc. et DeNA. Le dépôt source les reproduit à titre de référence, sans licence générale de redistribution ou d’exploitation commerciale. Cette application n’est ni affiliée ni approuvée par les ayants droit. Avant une diffusion publique ou commerciale, vérifier les conditions applicables aux illustrations et aux exports. Aucun déploiement public n’est effectué par ce travail.
+**La licence du dataset ne couvre pas les illustrations Pokémon.** Elles restent la propriété de Nintendo, Creatures Inc., GAME FREAK Inc. et DeNA. Le dépôt source les reproduit à titre de référence, sans licence générale de redistribution ou d’exploitation commerciale. Cette application n’est ni affiliée ni approuvée par les ayants droit. Avant une diffusion publique ou commerciale, vérifier les conditions applicables aux illustrations et aux exports. Le workflow de publication est fourni ; la mise en ligne dépend de l’activation de GitHub Pages dans les paramètres du dépôt.

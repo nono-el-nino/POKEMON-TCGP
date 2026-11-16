@@ -1,0 +1,22 @@
+Pocket Favorites — unofficial fan project
+
+Catalogue: PocketDecks / pokemon-tcg-pocket-cards v5 full.
+https://github.com/PocketDecks/pokemon-tcg-pocket-cards
+Version 5 datasets and additions: AGPL-3.0-or-later.
+Original work: Chase Manning; v5: Leonid Dalin and Chase Manning.
+See AGPL-3.0.txt. Dataset facts sourced from https://pocket.limitlesstcg.com/cards.
+Deck-builder reference mappings: Jon (flibustier), MIT, 2025.
+https://github.com/flibustier/pokemon-tcg-pocket-database
+
+French Pokémon names: PokéAPI, Paul Hallett and contributors, BSD-3-Clause.
+https://github.com/PokeAPI/pokeapi
+See POKEAPI-BSD-3-Clause.txt for full copyright, terms and disclaimer.
+
+Artwork and Pokémon names belong to Nintendo, Creatures Inc., GAME FREAK Inc.
+and DeNA. The data/code licence does not grant artwork rights. PocketDecks
+reproduces artwork for reference. No general artwork redistribution or commercial
+licence is asserted. Images are prepared from exact upstream WebP URLs, not licensed
+or generated substitutes. No affiliation or endorsement is implied.
+
+Instrument Sans and Bricolage Grotesque: SIL Open Font License 1.1.
+See the accompanying OFL files. Lucide icons: ISC licence.

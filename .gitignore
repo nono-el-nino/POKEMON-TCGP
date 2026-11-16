@@ -1,0 +1,13 @@
+node_modules/
+dist/
+playwright-report/
+test-results/
+*.log
+
+*.tsbuildinfo
+
+public/images/
+
+.local/
+
+public/source/

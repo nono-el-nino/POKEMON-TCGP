@@ -1,13 +1,13 @@
 import { test, expect } from "@playwright/test";
-const first = "Choisir Puissance Génétique, 1 diamant";
+const first = "Choisir Puissance Génétique, 1 étoile";
 async function selectBulbasaur(page: any) {
   await page.getByRole("button", { name: first, exact: true }).click();
   await page
     .getByRole("textbox", { name: "Rechercher dans la galerie" })
-    .fill("a1-001");
+    .fill("a1-227");
   await expect(
     page
-      .getByRole("button", { name: "Choisir Bulbizarre a1-001", exact: true })
+      .getByRole("button", { name: "Choisir Bulbizarre a1-227", exact: true })
       .locator("img"),
   ).toBeVisible();
   await page.waitForFunction(() => {
@@ -17,7 +17,7 @@ async function selectBulbasaur(page: any) {
     return img?.complete && img.naturalWidth > 0;
   });
   await page
-    .getByRole("button", { name: "Choisir Bulbizarre a1-001", exact: true })
+    .getByRole("button", { name: "Choisir Bulbizarre a1-227", exact: true })
     .click();
 }
 test("desktop selection, independent modes, persistence, ranking and JSON export", async ({
@@ -32,7 +32,7 @@ test("desktop selection, independent modes, persistence, ranking and JSON export
   await selectBulbasaur(page);
   await expect(
     page.getByRole("button", {
-      name: "Modifier Puissance Génétique, 1 diamant, Bulbizarre",
+      name: "Modifier Puissance Génétique, 1 étoile, Bulbizarre",
       exact: true,
     }),
   ).toBeVisible();
@@ -41,7 +41,7 @@ test("desktop selection, independent modes, persistence, ranking and JSON export
     .click();
   await expect(
     page.getByRole("button", {
-      name: "Choisir Plante, 1 diamant",
+      name: "Choisir Plante, 1 étoile",
       exact: true,
     }),
   ).toBeVisible();
@@ -51,7 +51,7 @@ test("desktop selection, independent modes, persistence, ranking and JSON export
   await page.reload();
   await expect(
     page.getByRole("button", {
-      name: "Modifier Puissance Génétique, 1 diamant, Bulbizarre",
+      name: "Modifier Puissance Génétique, 1 étoile, Bulbizarre",
       exact: true,
     }),
   ).toBeVisible();
@@ -64,13 +64,13 @@ test("desktop selection, independent modes, persistence, ranking and JSON export
   ).toBeVisible();
   await page
     .getByRole("button", {
-      name: "Ajouter Bulbizarre a1-001 au Top 10",
+      name: "Ajouter Bulbizarre a1-227 au Top 10",
       exact: true,
     })
     .click();
   await page
     .getByRole("button", {
-      name: "Désigner Bulbizarre a1-001 favori absolu",
+      name: "Désigner Bulbizarre a1-227 favori absolu",
       exact: true,
     })
     .click();
@@ -81,15 +81,21 @@ test("desktop selection, independent modes, persistence, ranking and JSON export
   await page.getByRole("button", { name: "JSON", exact: true }).click();
   const dl = await downloadPromise;
   expect(dl.suggestedFilename()).toBe("pocket-favorites.json");
+  const { readFile } = await import("node:fs/promises");
+  const payload = JSON.parse(await readFile((await dl.path())!, "utf8"));
+  expect(payload.signature.version).toBe(1);
+  expect(payload.signature.artwork["a1-227"].imageSha256).toMatch(
+    /^[a-f0-9]{64}$/,
+  );
   const saved = await page.evaluate(() =>
     JSON.parse(localStorage.getItem("pocket-favorites:v1")!),
   );
-  expect(saved.top).toEqual(["a1-001"]);
-  expect(saved.absolute).toBe("a1-001");
+  expect(saved.top).toEqual(["a1-227"]);
+  expect(saved.absolute).toBe("a1-227");
   await page.getByRole("button", { name: "Fermer", exact: true }).click();
   await page
     .getByRole("button", {
-      name: "Supprimer Bulbizarre a1-001 de tous les favoris",
+      name: "Supprimer Bulbizarre a1-227 de tous les favoris",
       exact: true,
     })
     .click();
@@ -259,19 +265,19 @@ test("all phone widths fit and images work with external network blocked", async
 test("missing illustration is labelled and never substituted", async ({
   page,
 }) => {
-  await page.route("**/images/cards/a1/001.webp", (route) => route.abort());
+  await page.route("**/images/cards/a1/227.webp", (route) => route.abort());
   await page.goto("/");
   await page.getByRole("button", { name: first, exact: true }).click();
   await page
     .getByRole("textbox", { name: "Rechercher dans la galerie" })
-    .fill("a1-001");
+    .fill("a1-227");
   const card = page.getByRole("button", {
-    name: "Choisir Bulbizarre a1-001",
+    name: "Choisir Bulbizarre a1-227",
     exact: true,
   });
   await expect(card).toContainText("Illustration indisponible");
   await expect(card.locator("img")).toHaveCount(0);
-  await expect(card).toContainText("A1-001");
+  await expect(card).toContainText("A1-227");
 });
 test("multiple candidates require explicit arbitration and favorites can be edited", async ({
   page,
@@ -288,7 +294,7 @@ test("multiple candidates require explicit arbitration and favorites can be edit
       buffer: Buffer.from(
         JSON.stringify({
           version: 1,
-          selections: { "set|a1|◊": "a1-001", "set|a1|☆": "a1-227" },
+          selections: { "set|a1|☆": "a1-227", "set|a1|◊◊◊◊": "a1-004" },
           top: [],
           absolute: null,
           winners: {},
@@ -314,7 +320,7 @@ test("multiple candidates require explicit arbitration and favorites can be edit
   expect(saved.winners["set|a1"]).toBe("a1-227");
   await page
     .getByRole("button", {
-      name: "Modifier la sélection Bulbizarre a1-001",
+      name: "Modifier la sélection Bulbizarre a1-227",
       exact: true,
     })
     .click();
@@ -326,7 +332,7 @@ test("multiple candidates require explicit arbitration and favorites can be edit
     .click();
   await expect(
     page.getByRole("button", {
-      name: "Modifier la sélection Bulbizarre a1-001",
+      name: "Modifier la sélection Bulbizarre a1-227",
       exact: true,
     }),
   ).toHaveCount(0);
@@ -342,5 +348,193 @@ test("story export is a real 1080px PNG", async ({ page }) => {
   const png = await readFile((await dl.path())!);
   expect(png.readUInt32BE(16)).toBe(1080);
   expect(png.readUInt32BE(20)).toBeGreaterThanOrEqual(1920);
+  await expect(page.getByRole("status")).not.toContainText("indisponible");
+});
+test("rarity filter excludes common cards and migrates legacy choices with a downloadable backup", async ({
+  page,
+}) => {
+  const legacy = {
+    version: 1,
+    selections: { "set|a1|◊": "a1-001", "set|a1|☆": "a1-227" },
+    top: ["a1-001", "a1-227"],
+    absolute: "a1-001",
+    winners: {},
+  };
+  await page.addInitScript(
+    (value) =>
+      localStorage.setItem("pocket-favorites:v1", JSON.stringify(value)),
+    legacy,
+  );
+  await page.goto("/");
+  await expect(
+    page
+      .getByRole("combobox", { name: "Filtrer par rareté", exact: true })
+      .locator("option"),
+  ).toHaveCount(7);
+  await expect(
+    page.getByRole("button", {
+      name: "Choisir Puissance Génétique, 1 diamant",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", {
+      name: "Modifier Puissance Génétique, 1 étoile, Bulbizarre",
+      exact: true,
+    }),
+  ).toBeVisible();
+  const state = await page.evaluate(() => ({
+    active: JSON.parse(localStorage.getItem("pocket-favorites:v1")!),
+    backup: JSON.parse(
+      localStorage.getItem("pocket-favorites:v1:before-rarity-filter")!,
+    ),
+  }));
+  expect(state.active.selections).toEqual({ "set|a1|☆": "a1-227" });
+  expect(state.active.top).toEqual(["a1-227"]);
+  expect(state.active.absolute).toBeNull();
+  expect(state.backup).toEqual(legacy);
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: /Mes favoris/ })
+    .click();
+  const dl = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: /Télécharger mes anciens choix JSON/ })
+    .click();
+  expect((await dl).suggestedFilename()).toBe(
+    "pocket-favorites-anciens-choix.json",
+  );
+});
+test("profile uses unique cards across modes and downloads an illustrated result PNG", async ({
+  page,
+}) => {
+  const value = {
+    version: 1,
+    selections: {
+      "set|a1|☆": "a1-227",
+      "type|Grass|☆": "a1-227",
+      "set|a1|◊◊◊◊": "a1-004",
+      "type|Fire|☆☆☆": "a1-280",
+    },
+    top: ["a1-004"],
+    absolute: "a1-280",
+    winners: {},
+  };
+  await page.addInitScript(
+    (value) =>
+      localStorage.setItem("pocket-favorites:v1", JSON.stringify(value)),
+    value,
+  );
+  await page.goto("/");
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: /Mes favoris/ })
+    .click();
+  await expect(page.locator(".profile-count")).toContainText(
+    "3 illustrations distinctes",
+  );
+  await expect(page.locator(".profile-count")).not.toContainText(
+    "Première tendance",
+  );
+  const { readFile } = await import("node:fs/promises");
+  const { computeProfile } = await import("../../src/personality.mjs");
+  const catalog = JSON.parse(
+      await readFile("public/data/catalog.json", "utf8"),
+    ),
+    styles = JSON.parse(await readFile("public/data/profiles.json", "utf8"));
+  const selected = catalog.cards
+    .filter((c: any) => ["a1-004", "a1-227", "a1-280"].includes(c.id))
+    .map((c: any) => ({ ...c, style: styles.cards[c.id] }));
+  const result = computeProfile(selected)!;
+  await expect(page.locator("#collector-profile-title")).toHaveText(
+    result.profile!.name,
+  );
+  for (const axis of ["softness", "energy", "mystery", "radiance"]) {
+    const names: any = {
+      softness: "Douceur",
+      energy: "Énergie",
+      mystery: "Mystère",
+      radiance: "Éclat",
+    };
+    await expect(
+      page
+        .locator(".collector-profile")
+        .getByRole("meter", { name: names[axis], exact: true }),
+    ).toHaveAttribute("aria-valuenow", String(result.scores[axis]));
+  }
+  await page
+    .getByText("Comment mon profil est-il calculé ?", { exact: true })
+    .click();
+  await expect(page.locator(".profile-types>div")).toHaveCount(12);
+  const promise = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Télécharger mon résultat PNG", exact: true })
+    .click();
+  const dl = await promise;
+  expect(dl.suggestedFilename()).toBe("pocket-favorites-resultat-1.png");
+  const png = await readFile((await dl.path())!);
+  expect(png.readUInt32BE(16)).toBe(2400);
+  expect(png.readUInt32BE(20)).toBeGreaterThanOrEqual(1500);
+  expect(png.length).toBeGreaterThan(100000);
+  await expect(page.getByRole("status")).toContainText("Prêt à partager");
+  await expect(page.getByRole("status")).not.toContainText("indisponible");
+  for (const width of [320, 390, 768]) {
+    await page.setViewportSize({ width, height: 844 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  }
+});
+test("large result exports every chosen print across multiple HD PNG pages", async ({
+  page,
+}) => {
+  const { readFile } = await import("node:fs/promises");
+  const { cards } = JSON.parse(
+    await readFile("public/data/catalog.json", "utf8"),
+  );
+  const selections: Record<string, string> = {};
+  for (const c of cards) {
+    const key = `set|${c.set}|${c.rarity}`;
+    if (!selections[key]) selections[key] = c.id;
+    if (Object.keys(selections).length === 25) break;
+  }
+  await page.addInitScript(
+    (selections) =>
+      localStorage.setItem(
+        "pocket-favorites:v1",
+        JSON.stringify({
+          version: 1,
+          selections,
+          top: [],
+          absolute: null,
+          winners: {},
+        }),
+      ),
+    selections,
+  );
+  await page.goto("/");
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: /Mes favoris/ })
+    .click();
+  const downloads: any[] = [];
+  page.on("download", (d) => downloads.push(d));
+  await page
+    .getByRole("button", { name: "Télécharger mon résultat PNG", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText(
+    "2 PNG HD téléchargé(s)",
+  );
+  expect(downloads.map((d) => d.suggestedFilename())).toEqual([
+    "pocket-favorites-resultat-1.png",
+    "pocket-favorites-resultat-2.png",
+  ]);
+  for (const dl of downloads) {
+    const png = await readFile((await dl.path())!);
+    expect(png.readUInt32BE(16)).toBe(2400);
+    expect(png.length).toBeGreaterThan(100000);
+  }
   await expect(page.getByRole("status")).not.toContainText("indisponible");
 });

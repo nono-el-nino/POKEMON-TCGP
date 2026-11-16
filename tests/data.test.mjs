@@ -5,15 +5,15 @@ import { parseCollection, cleanCollection } from "../src/storage.mjs";
 const { cards, sets, meta } = JSON.parse(
   readFileSync(new URL("../public/data/catalog.json", import.meta.url)),
 );
-const card = cards.find((c) => c.id === "a1-001");
+const card = cards.find((c) => c.id === "a1-227");
 const saved = {
   version: 1,
-  selections: { "set|a1|◊": card.id },
+  selections: { "set|a1|☆": card.id },
   top: [card.id],
   absolute: card.id,
   winners: { "type|Grass": card.id },
 };
-test("full import retains every impression with unique ID and matching artwork", () => {
+test("full import retains every eligible impression with unique ID and matching artwork", () => {
   assert.equal(cards.length, meta.cards);
   assert.equal(new Set(cards.map((c) => c.id)).size, cards.length);
   for (const c of cards) {
@@ -58,8 +58,8 @@ test("import rejects wrong schema and removes foreign IDs, mismatched slots and 
       ...saved,
       selections: {
         ...saved.selections,
-        "set|a2|◊": card.id,
-        "type|Water|◊": card.id,
+        "set|a2|☆": card.id,
+        "type|Water|☆": card.id,
         "set|a1|☆☆": "unknown",
       },
       top: [card.id, card.id, "unknown"],
@@ -83,11 +83,11 @@ test("removing a card also clears its ranking, absolute favorite and category wi
 test("same card can occupy two modes; deleting only one slot keeps ranking", () => {
   const both = {
     ...saved,
-    selections: { ...saved.selections, "type|Grass|◊": card.id },
+    selections: { ...saved.selections, "type|Grass|☆": card.id },
   };
   const roundtrip = parseCollection(both, cards).value;
   assert.equal(Object.keys(roundtrip.selections).length, 2);
-  delete roundtrip.selections["set|a1|◊"];
+  delete roundtrip.selections["set|a1|☆"];
   assert.deepEqual(cleanCollection(roundtrip, cards).top, [card.id]);
 });
 test("category arbiters cannot smuggle extra segments into a saved winner key", () => {

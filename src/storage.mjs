@@ -1,3 +1,4 @@
+import { isEligibleCard } from "./eligibility.mjs";
 export const STORAGE_KEY = "pocket-favorites:v1";
 export function parseCollection(input, cards) {
   if (
@@ -10,7 +11,7 @@ export function parseCollection(input, cards) {
     !Array.isArray(input.top)
   )
     throw Error("Ce fichier n’est pas une sauvegarde Pocket Favorites v1.");
-  const byId = new Map(cards.map((c) => [c.id, c]));
+  const byId = new Map(cards.filter(isEligibleCard).map((c) => [c.id, c]));
   const selections = {};
   let removed = 0;
   for (const [key, id] of Object.entries(input.selections)) {

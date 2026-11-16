@@ -51,6 +51,10 @@ import {
 } from "./model";
 import { parseCollection, cleanCollection, STORAGE_KEY } from "./storage.mjs";
 import { download, exportPNG } from "./export";
+import { exportResultPNG } from "./share";
+import ProfilePanel, { ScoreBars } from "./components/ProfilePanel";
+import { isEligibleCard } from "./eligibility.mjs";
+import { computeProfile } from "./personality.mjs";
 
 function Modal({
   title,
@@ -144,16 +148,37 @@ function App() {
     [summaryGroup, setSummaryGroup] = useState<"set" | "type" | "rarity">(
       "set",
     );
+  const [legacyBackup, setLegacyBackup] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null),
     matrixRef = useRef<HTMLElement>(null);
   useEffect(() => {
     let alive = true;
     setLoadError(false);
-    fetch(`${import.meta.env.BASE_URL}data/catalog.json`)
-      .then((r) => {
-        if (!r.ok) throw Error();
-        return r.json();
+    Promise.all(
+      ["catalog.json", "profiles.json"].map((file) =>
+        fetch(`${import.meta.env.BASE_URL}data/${file}`, { cache: "no-cache" }).then((r) => {
+          if (!r.ok) throw Error();
+          return r.json();
+        }),
+      ),
+    )
+      .then(([raw, profiles]) => {
+        if (profiles.version !== 1 || profiles.sourceSha256 !== raw.meta.sha256)
+          throw Error("Scores incompatibles avec le catalogue.");
+        const cards = raw.cards.filter(isEligibleCard).map((card: Card) => {
+          const style = profiles.cards[card.id];
+          if (!style) throw Error("Scores manquants");
+          return { ...card, style };
+        });
+        return {
+          ...raw,
+          cards,
+          sets: raw.sets.map((set: Catalog["sets"][number]) => ({
+            ...set,
+            count: cards.filter((c: Card) => c.set === set.id).length,
+          })),
+        };
       })
       .then((data: Catalog) => {
         if (!alive) return;
@@ -164,8 +189,21 @@ function App() {
             const result = parseCollection(JSON.parse(saved), data.cards);
             setCollection(result.value as Collection);
             if (result.removed)
+              try {
+                if (
+                  !localStorage.getItem(STORAGE_KEY + ":before-rarity-filter")
+                )
+                  localStorage.setItem(
+                    STORAGE_KEY + ":before-rarity-filter",
+                    saved,
+                  );
+              } catch {}
+            setLegacyBackup(
+              localStorage.getItem(STORAGE_KEY + ":before-rarity-filter"),
+            );
+            if (result.removed)
               setToast(
-                `${result.removed} sélection(s) absente(s) du catalogue ont été ignorées.`,
+                `${result.removed} ancien(s) choix exclu(s) de la sélection EX et plus. Une sauvegarde reste téléchargeable dans Mes favoris.`,
               );
           } else setCollection({ ...EMPTY });
         } catch {
@@ -366,9 +404,33 @@ function App() {
   };
   const exportJSON = () => {
     download(
-      new Blob([JSON.stringify(collection, null, 2)], {
-        type: "application/json",
-      }),
+      new Blob(
+        [
+          JSON.stringify(
+            {
+              ...collection,
+              signature: {
+                ...computeProfile(selected),
+                catalogSha256: catalog?.meta.sha256,
+                artwork: Object.fromEntries(
+                  selected.map((c) => [
+                    c.id,
+                    {
+                      scores: c.style?.scores,
+                      imageSha256: c.style?.imageSha256,
+                    },
+                  ]),
+                ),
+              },
+            },
+            null,
+            2,
+          ),
+        ],
+        {
+          type: "application/json",
+        },
+      ),
       "pocket-favorites.json",
     );
     setToast("Sauvegarde JSON téléchargée.");
@@ -386,6 +448,21 @@ function App() {
       );
       setToast(
         `${result.pages} image(s) exportée(s)${result.missing ? ` · ${result.missing} illustration(s) indisponible(s), signalée(s) dans l’image` : ""}.`,
+      );
+      setModal(null);
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : "Export impossible.");
+    } finally {
+      setExporting(false);
+    }
+  };
+  const exportResult = async () => {
+    if (!collection) return;
+    setExporting(true);
+    try {
+      const r = await exportResultPNG(selected, collection);
+      setToast(
+        `${r.pages} PNG HD téléchargé(s)${r.missing ? ` · ${r.missing} illustration(s) indisponible(s), signalée(s) dans l’image` : ""}. Prêt à partager !`,
       );
       setModal(null);
     } catch (e) {
@@ -545,7 +622,9 @@ function App() {
                 <button className="primary-button" onClick={start}>
                   Composer ma matrice <ArrowRight size={18} />
                 </button>
-                <span className="hero-note">Sans compte. Juste vos goûts.</span>
+                <span className="hero-note">
+                  EX, illustrations rares et promos.
+                </span>
               </div>
             </div>
             <div
@@ -585,7 +664,7 @@ function App() {
                   <Layers size={18} />
                 </span>
                 <strong>{cards.length.toLocaleString("fr-FR")}</strong>
-                <span>cartes à aimer</span>
+                <span>cartes à choisir</span>
               </div>
               <i />
               <div>
@@ -619,8 +698,8 @@ function App() {
                     La matrice de vos envies<span>.</span>
                   </h2>
                   <p>
-                    Une case, une catégorie, votre carte préférée. À vous de
-                    jouer.
+                    4 losanges (EX), étoiles, couronnes et promotions. À vous de
+                    choisir.
                   </p>
                 </div>
                 <div className="section-actions">
@@ -958,6 +1037,30 @@ function App() {
                 <Download size={16} /> Exporter mes choix
               </button>
             </div>
+            {legacyBackup && (
+              <div className="legacy-notice">
+                <p>
+                  Les cartes à 1, 2 et 3 losanges sont retirées de cette
+                  version. Vos anciens choix restent sauvegardés.
+                </p>
+                <button
+                  className="text-button"
+                  onClick={() =>
+                    download(
+                      new Blob([legacyBackup], { type: "application/json" }),
+                      "pocket-favorites-anciens-choix.json",
+                    )
+                  }
+                >
+                  Télécharger mes anciens choix JSON <Download size={14} />
+                </button>
+              </div>
+            )}
+            <ProfilePanel
+              cards={selected}
+              onExport={() => void exportResult()}
+              busy={exporting}
+            />
             {selected.length > 0 && (
               <>
                 <div className="favorites-featured">
@@ -1231,7 +1334,13 @@ function App() {
         <button className="text-button" onClick={() => setModal("help")}>
           Sources & mentions
         </button>
-        <a className="source-link" href={`${import.meta.env.BASE_URL}source/pocket-favorites-source.tgz`} download>Code source · AGPL</a>
+        <a
+          className="source-link"
+          href={`${import.meta.env.BASE_URL}source/pocket-favorites-source.tgz`}
+          download
+        >
+          Code source · AGPL
+        </a>
         <span className="footer-legal">
           Projet de fans non officiel · Illustrations © Pokémon et leurs ayants
           droit.
@@ -1329,6 +1438,17 @@ function App() {
               >
                 Vérifier cette impression sur Limitless ↗
               </a>
+              {zoom.style && (
+                <details className="card-style-details">
+                  <summary>La signature de cette illustration</summary>
+                  <ScoreBars scores={zoom.style.scores} />
+                  <p>
+                    60 % couleurs et textures de cette illustration, 40 %
+                    attributs du Pokémon. Ces notes contribuent à la moyenne de
+                    votre profil.
+                  </p>
+                </details>
+              )}
               {zoom.variants.length > 0 && (
                 <details>
                   <summary>
@@ -1364,11 +1484,27 @@ function App() {
           }}
         >
           <p className="modal-intro">
-            Une image à partager ou une sauvegarde à retrouver. L’export PNG
-            reprend les choix explicites du mode{" "}
+            Partagez votre profil et toutes vos illustrations favorites en PNG
+            haute qualité, ou emportez une matrice et une sauvegarde. L’export
+            de matrice reprend les choix explicites du mode{" "}
             {mode === "set" ? "Extension × Rareté" : "Type × Rareté"}, avec leur
             catégorie et leur identifiant.
           </p>
+          <button
+            className="result-export-option"
+            disabled={exporting || !selected.length}
+            onClick={() => void exportResult()}
+          >
+            <Sparkles size={24} />
+            <span>
+              <strong>Mon résultat · PNG HD</strong>
+              <small>
+                2400 px · mon profil, ses 4 dimensions et tous mes favoris des
+                deux matrices
+              </small>
+            </span>
+            <Download size={19} />
+          </button>
           <label className="export-mode-label">
             Matrice à exporter{" "}
             <select

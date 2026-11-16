@@ -3184,5 +3184,326 @@ footer .text-button,
 .hero-art {
   overflow: clip;
 }
-.source-link{font-size:9px;color:#6b7e60;text-underline-offset:3px}
-@media(max-width:600px){.source-link{font-size:8px}}
+.source-link {
+  font-size: 9px;
+  color: #6b7e60;
+  text-underline-offset: 3px;
+}
+@media (max-width: 600px) {
+  .source-link {
+    font-size: 8px;
+  }
+}
+.collector-profile {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px 48px;
+  margin: 30px 0;
+  border: 1px solid #d6e5d5;
+  background: #eef5e9;
+  padding: 32px;
+  border-radius: 13px;
+}
+.profile-intro h2 {
+  font-size: 42px;
+  letter-spacing: -1.6px;
+  margin: 17px 0 12px;
+}
+.profile-intro > p {
+  max-width: 450px;
+  color: #64765e;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.profile-count {
+  color: #75876c;
+  font-size: 10px;
+  line-height: 1.7;
+  margin-top: 13px;
+}
+.profile-intro .primary-button {
+  margin-top: 21px;
+}
+.profile-measures {
+  align-self: center;
+}
+.profile-scores {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 25px 22px;
+}
+.profile-axis > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: #4f6448;
+  margin-bottom: 10px;
+}
+.profile-axis strong {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.profile-axis small {
+  font-weight: 400;
+  font-size: 9px;
+  margin-left: 3px;
+  color: #7c8c74;
+}
+.profile-track {
+  height: 7px;
+  overflow: hidden;
+  background: #dfe8d8;
+  border-radius: 9px;
+}
+.profile-track > span {
+  display: block;
+  height: 100%;
+  border-radius: 9px;
+}
+.profile-method {
+  grid-column: 1/-1;
+  border-top: 1px solid #d8e4d0;
+  padding-top: 18px;
+  color: #66785e;
+  font-size: 11px;
+  line-height: 1.8;
+}
+.profile-method > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #4b6742;
+}
+.profile-method > div {
+  padding-top: 14px;
+}
+.profile-method p {
+  margin-bottom: 12px;
+  max-width: 1000px;
+}
+.profile-method h3 {
+  font-size: 19px;
+  margin: 20px 0 13px;
+}
+.axis-legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 24px;
+  margin: 18px 0;
+}
+.profile-types {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.profile-types > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #f7faf3;
+  padding: 14px;
+  border: 1px solid #e0ead9;
+  border-radius: 5px;
+}
+.profile-types strong {
+  font-family: "Bricolage Grotesque";
+  font-size: 16px;
+  color: #4f6745;
+}
+.profile-types span {
+  font-size: 10px;
+  line-height: 1.65;
+}
+.profile-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  padding: 25px;
+  color: #83a16f;
+  text-align: center;
+  border: 1px dashed #cbddc0;
+  border-radius: 8px;
+}
+.profile-placeholder p {
+  font-size: 13px;
+  color: #5b7750;
+}
+.profile-placeholder span {
+  font-size: 10px;
+  line-height: 1.7;
+  color: #7c8c71;
+}
+.result-export-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid #aacda9;
+  background: #edf7e7;
+  border-radius: 8px;
+  text-align: left;
+  color: #527747;
+  margin: 20px 0;
+}
+.result-export-option > span {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+.result-export-option strong {
+  font-family: "Bricolage Grotesque";
+  font-size: 19px;
+  color: #374e30;
+}
+.result-export-option small {
+  font-size: 10px;
+  line-height: 1.6;
+  color: #6f8362;
+}
+.result-export-option:hover {
+  background: #e2f2d7;
+}
+.card-style-details .profile-scores {
+  grid-template-columns: 1fr;
+  margin-top: 20px;
+  gap: 16px;
+}
+.card-style-details p {
+  font-size: 10px !important;
+  line-height: 1.7;
+}
+.legacy-notice {
+  background: #faf3df;
+  border: 1px solid #e8dcb8;
+  border-radius: 8px;
+  padding: 17px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 25px 0;
+  color: #7b704b;
+  font-size: 11px;
+  line-height: 1.7;
+}
+.legacy-notice .text-button {
+  color: #776132;
+  flex-shrink: 0;
+}
+.profile-intro .eyebrow {
+  font-size: 9px;
+  line-height: 1.6;
+}
+@media (max-width: 850px) {
+  .collector-profile {
+    gap: 24px;
+    padding: 24px;
+  }
+  .profile-intro h2 {
+    font-size: 34px;
+  }
+  .profile-intro > p {
+    font-size: 12px;
+  }
+  .profile-scores {
+    gap: 22px 16px;
+  }
+  .profile-axis > div:first-child {
+    font-size: 11px;
+  }
+  .profile-types {
+    grid-template-columns: 1fr 1fr;
+  }
+  .legacy-notice {
+    flex-direction: column;
+    align-items: start;
+    gap: 8px;
+  }
+}
+@media (max-width: 600px) {
+  .collector-profile {
+    grid-template-columns: 1fr;
+    gap: 27px;
+    padding: 23px 18px;
+    margin: 25px 0;
+  }
+  .profile-intro h2 {
+    font-size: 37px;
+  }
+  .profile-intro > p {
+    font-size: 12px;
+  }
+  .profile-count {
+    font-size: 9px;
+  }
+  .profile-intro .primary-button {
+    font-size: 11px;
+    width: 100%;
+    min-height: 44px;
+  }
+  .profile-scores {
+    gap: 23px 20px;
+  }
+  .profile-axis > div:first-child {
+    font-size: 11px;
+  }
+  .profile-axis strong {
+    font-size: 14px;
+  }
+  .profile-method {
+    font-size: 10px;
+    padding-top: 16px;
+  }
+  .profile-types {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .profile-types > div {
+    padding: 11px;
+  }
+  .profile-types strong {
+    font-size: 14px;
+  }
+  .profile-types span {
+    font-size: 9px;
+  }
+  .axis-legend {
+    grid-template-columns: 1fr;
+  }
+  .result-export-option {
+    padding: 15px;
+    gap: 12px;
+  }
+  .result-export-option strong {
+    font-size: 17px;
+  }
+  .result-export-option small {
+    font-size: 9px;
+  }
+  .result-export-option > svg {
+    width: 20px;
+  }
+  .legacy-notice {
+    font-size: 10px;
+    padding: 15px;
+  }
+  .hero-note {
+    white-space: normal;
+    flex: 1;
+    max-width: 135px;
+    line-height: 1.6;
+  }
+  .profile-intro .eyebrow {
+    font-size: 8px;
+    letter-spacing: 1px;
+  }
+  .zoom-content .profile-axis > div:first-child {
+    font-size: 11px;
+    text-align: left;
+  }
+}

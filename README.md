@@ -1,6 +1,6 @@
 # Pocket Favorites
 
-Application de fans responsive pour composer ses favoris Pokémon TCG Pocket. React 19, TypeScript, Vite. Hébergement statique, sans compte ni serveur applicatif.
+Application de fans responsive pour composer ses favoris Pokémon TCG Pocket parmi les cartes à **4 losanges inclus (EX), étoiles, couronnes et promotions**. Les raretés inférieures sont exclues. React 19, TypeScript, Vite. Hébergement statique, sans compte ni serveur applicatif.
 
 ## Développement
 
@@ -15,7 +15,7 @@ npm run dev -- --port 5173
 Dans un environnement local classique, le paramètre `--cache` est facultatif. Les polices sont servies localement. Les illustrations exactes sont préparées localement par `images:sync`, puis servies avec le site. Les URL originales restent dans le catalogue. Aucun accès externe n’est nécessaire pour afficher les cartes une fois le site construit.
 
 ```sh
-npm run build         # TypeScript + bundle statique dans dist/
+npm run build         # Illustrations + scores de profil + TypeScript + bundle dans dist/
 npm test              # Intégrité, variantes, import et stockage
 npm run test:e2e      # Parcours navigateur desktop/mobile, PNG, JSON
 npm run preview -- --port 4173
@@ -27,11 +27,14 @@ Les tests navigateur utilisent `/usr/bin/chromium`. Pour une autre machine, adap
 
 ```sh
 npm run data:update   # Télécharge v5 FULL + index des extensions + noms PokéAPI
-npm run images:sync   # Prépare les nouveaux WebP exacts dans public/images/
+npm run images:sync   # Prépare les WebP éligibles et retire les anciennes images exclues
+npm run profiles:build # Mesure les illustrations et classe chaque impression sur 4 axes
 npm run data:verify   # Revérifie aussi les URL sources avec 12 requêtes simultanées
 npm test
 npm run build
 ```
+
+La sélection actuelle compte **1 716 impressions** issues des 4 547 entrées v5. Le seuil est centralisé dans `src/eligibility.mjs` ; le champ EX seul ne peut pas réintroduire une carte de rareté inférieure.
 
 L’import utilise `curl` avec validation TLS conservée et échoue sur un téléchargement incomplet. Les nouvelles extensions et raretés sont découvertes sans modification de l’interface. `public/data/catalog.json` contient les données préparées ; la date et le SHA-256 du payload complet figurent dans `meta`. Les impressions restent séparées par leur ID extension-numéro. Le chemin de chaque image doit correspondre exactement à cet ID. Les champs de variantes sont conservés. Les traductions sont enrichies avec les noms PokéAPI lorsqu’une correspondance est disponible ; sinon le nom anglais de la source est conservé. Les extensions connues sont traduites, les nouvelles gardent leur nom source.
 
@@ -54,8 +57,17 @@ Aucune clé ni aucun secret à ajouter : le déploiement utilise le jeton tempor
 - Les résumés par catégorie proposent un gagnant s’il existe un seul candidat. Plusieurs candidats demandent un arbitrage explicite.
 - Top 10 ordonné et favori absolu sont choisis manuellement. Une suppression nettoie les références obsolètes.
 - Comparaison assistée : tournoi séquentiel parmi les candidats filtrés, avec choix final toujours confirmé par l’utilisateur.
+- Les anciennes sauvegardes sont migrées : les choix exclus sont retirés de la sélection active, et une copie JSON antérieure reste téléchargeable dans Mes favoris.
 - Sauvegarde `localStorage` version 1 ; JSON exportable et importable. L’import fusionne les cases ; les cases du fichier remplacent les collisions. Les IDs inconnus et cases incompatibles sont rejetés et signalés. Aucun secret dans les sauvegardes.
 - PNG paysage 2400 px et story 1080 px, répartis en planches lisibles pour les grandes collections. Les images absentes sont signalées, jamais remplacées par une autre illustration. Les restrictions de téléchargements multiples du navigateur peuvent demander une autorisation.
+
+## Profil de collectionneur et partage PNG HD
+
+Dans **Mes favoris**, quatre moyennes (Douceur, Énergie, Mystère, Éclat) déterminent une signature parmi 12. Les scores de chaque carte combinent 60 % de mesures de l’illustration réelle et 40 % d’attributs Pokémon. Chaque impression compte une fois, quel que soit le nombre de cases occupées. Aucun score n’est tiré au hasard. Les règles complètes, coefficients, égalités et limites sont documentés dans [docs/profiles.md](docs/profiles.md), ainsi que dans l’interface.
+
+Le bouton **Télécharger mon résultat PNG** crée une image de 2400 px de large avec le profil, les quatre notes et tous les favoris uniques, y compris ceux de l’autre matrice. Le Top 10 et le favori absolu sont signalés. Au-delà de 24 cartes, l’export est réparti en plusieurs images. Les exports de matrices paysage et story et le JSON complet restent disponibles via Exporter. Ce profil est une lecture ludique des goûts visuels.
+
+La compilation génère `public/data/profiles.json` via Sharp/libvips (dépendance de développement uniquement). Le cache est réutilisé lorsque les images, métadonnées et règles sont identiques. Aucun traitement des images ni appel de classification externe n’est nécessaire dans le navigateur.
 
 ## Architecture
 

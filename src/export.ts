@@ -16,7 +16,7 @@ export function download(blob: Blob, name: string) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
-const load = (url: string) =>
+export const loadImage = (url: string) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
     const i = new Image();
     const t = setTimeout(() => reject(Error("Image indisponible")), 15000);
@@ -87,7 +87,7 @@ export async function exportPNG(
     h: number,
   ) => {
     try {
-      ctx.drawImage(await load(cardImageUrl(entry.card)), x, y, w, h);
+      ctx.drawImage(await loadImage(cardImageUrl(entry.card)), x, y, w, h);
     } catch {
       missing++;
       ctx.fillStyle = "#e6e9e3";

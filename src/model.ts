@@ -9,6 +9,20 @@ export type Card = {
   category: string;
   artist: string;
   image: string;
+  ex: boolean;
+  stage: string | null;
+  artStyle: string | null;
+  species: {
+    id: number;
+    baby: boolean;
+    legendary: boolean;
+    mythical: boolean;
+  } | null;
+  style?: {
+    scores: Record<string, number>;
+    features: Record<string, number>;
+    imageSha256: string;
+  };
   variants: { set_code: string; id: number; rarity: string }[];
 };
 export type Expansion = {
@@ -73,9 +87,6 @@ export const typeColors: Record<string, string> = {
   Trainer: "#809a97",
 };
 export const standardRarities = [
-  "◊",
-  "◊◊",
-  "◊◊◊",
   "◊◊◊◊",
   "☆",
   "☆☆",

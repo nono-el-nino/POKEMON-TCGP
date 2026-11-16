@@ -1,4 +1,11 @@
-import { readFile, writeFile, mkdir, rename, rm } from "node:fs/promises";
+import {
+  readFile,
+  writeFile,
+  mkdir,
+  rename,
+  rm,
+  readdir,
+} from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 const exec = promisify(execFile);
@@ -52,7 +59,31 @@ await Promise.all(
     }
   }),
 );
+// This directory only contains generated card assets. Remove retired prints so
+// a build after changing the rarity policy does not ship the old images.
+let retired = 0;
+if (!failures.length) {
+  const wanted = new Set(cards.map((c) => `${c.set}/${c.number}.webp`));
+  for (const dir of await readdir("public/images/cards", {
+    withFileTypes: true,
+  })) {
+    if (!dir.isDirectory() || !/^[a-z0-9]+$/.test(dir.name)) continue;
+    for (const file of await readdir(`public/images/cards/${dir.name}`, {
+      withFileTypes: true,
+    })) {
+      if (
+        file.isFile() &&
+        /^\d+\.webp$/.test(file.name) &&
+        !wanted.has(`${dir.name}/${file.name}`)
+      ) {
+        await rm(`public/images/cards/${dir.name}/${file.name}`);
+        retired++;
+      }
+    }
+  }
+}
 const report = {
+  retired,
   checked: cards.length,
   cached,
   downloaded,

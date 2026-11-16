@@ -8,7 +8,7 @@ See AGPL-3.0.txt. Dataset facts sourced from https://pocket.limitlesstcg.com/car
 Deck-builder reference mappings: Jon (flibustier), MIT, 2025.
 https://github.com/flibustier/pokemon-tcg-pocket-database
 
-French Pokémon names: PokéAPI, Paul Hallett and contributors, BSD-3-Clause.
+French Pokémon names and species attributes: PokéAPI, Paul Hallett and contributors, BSD-3-Clause.
 https://github.com/PokeAPI/pokeapi
 See POKEAPI-BSD-3-Clause.txt for full copyright, terms and disclaimer.
 

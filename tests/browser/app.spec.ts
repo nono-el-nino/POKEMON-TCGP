@@ -1,3 +1,4 @@
+import { cardCategory } from "../../src/categories.mjs";
 import { test, expect } from "@playwright/test";
 const first = "Choisir Puissance Génétique, 1 étoile";
 async function selectBulbasaur(page: any) {
@@ -370,7 +371,7 @@ test("rarity filter excludes common cards and migrates legacy choices with a dow
     page
       .getByRole("combobox", { name: "Filtrer par rareté", exact: true })
       .locator("option"),
-  ).toHaveCount(7);
+  ).toHaveCount(9);
   await expect(
     page.getByRole("button", {
       name: "Choisir Puissance Génétique, 1 diamant",
@@ -496,7 +497,7 @@ test("large result exports every chosen print across multiple HD PNG pages", asy
   );
   const selections: Record<string, string> = {};
   for (const c of cards) {
-    const key = `set|${c.set}|${c.rarity}`;
+    const key = `set|${c.set}|${cardCategory(c)}`;
     if (!selections[key]) selections[key] = c.id;
     if (Object.keys(selections).length === 25) break;
   }
@@ -536,5 +537,144 @@ test("large result exports every chosen print across multiple HD PNG pages", asy
     expect(png.readUInt32BE(16)).toBe(2400);
     expect(png.length).toBeGreaterThan(100000);
   }
+  await expect(page.getByRole("status")).not.toContainText("indisponible");
+});
+test("three separate 2-star cells contain disjoint galleries and preserve all selections", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const rows = [
+    {
+      label: "2 étoiles · autres Pokémon",
+      id: "a1-251",
+      name: "Florizarre ex",
+      key: "☆☆",
+    },
+    {
+      label: "2 étoiles · arc-en-ciel",
+      id: "a1-274",
+      name: "Sulfura ex",
+      key: "☆☆:rainbow",
+    },
+    {
+      label: "2 étoiles · Dresseurs",
+      id: "a1-266",
+      name: "Erika",
+      key: "☆☆:trainer",
+    },
+  ];
+  for (const row of rows) {
+    await page
+      .getByRole("button", {
+        name: `Choisir Puissance Génétique, ${row.label}`,
+        exact: true,
+      })
+      .click();
+    const dialog = page.getByRole("dialog");
+    await expect(
+      dialog.getByRole("button", {
+        name: `Choisir ${row.name} ${row.id}`,
+        exact: true,
+      }),
+    ).toBeVisible();
+    for (const other of rows.filter((r) => r !== row))
+      await expect(
+        dialog.getByRole("button", {
+          name: `Choisir ${other.name} ${other.id}`,
+          exact: true,
+        }),
+      ).toHaveCount(0);
+    await dialog
+      .getByRole("button", {
+        name: `Choisir ${row.name} ${row.id}`,
+        exact: true,
+      })
+      .click();
+  }
+  const saved = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("pocket-favorites:v1")!),
+  );
+  expect(saved.selections).toEqual({
+    "set|a1|☆☆": "a1-251",
+    "set|a1|☆☆:rainbow": "a1-274",
+    "set|a1|☆☆:trainer": "a1-266",
+  });
+  await page.reload();
+  for (const row of rows)
+    await expect(
+      page.getByRole("button", {
+        name: `Modifier Puissance Génétique, ${row.label}, ${row.name}`,
+        exact: true,
+      }),
+    ).toBeVisible();
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: /Mes favoris/ })
+    .click();
+  await page
+    .getByRole("combobox", { name: "Rareté des favoris", exact: true })
+    .selectOption("☆☆:rainbow");
+  await expect(page.locator(".favorite-card")).toHaveCount(1);
+  await expect(
+    page.getByRole("heading", { name: "Sulfura ex", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("combobox", { name: "Rareté des favoris", exact: true })
+    .selectOption("☆☆:trainer");
+  await expect(page.locator(".favorite-card")).toHaveCount(1);
+  await expect(
+    page.getByRole("heading", { name: "Erika", exact: true }),
+  ).toBeVisible();
+});
+test("legacy rainbow choices move to the rainbow cell without losing top 10 or absolute favorite", async ({
+  page,
+}) => {
+  const old = {
+    version: 1,
+    selections: { "set|a1|☆☆": "a1-274", "type|Fire|☆☆": "a1-274" },
+    top: ["a1-274"],
+    absolute: "a1-274",
+    winners: { "rarity|☆☆": "a1-274" },
+  };
+  await page.addInitScript(
+    (value) =>
+      localStorage.setItem("pocket-favorites:v1", JSON.stringify(value)),
+    old,
+  );
+  await page.goto("/");
+  await expect(
+    page.getByRole("button", {
+      name: "Modifier Puissance Génétique, 2 étoiles · arc-en-ciel, Sulfura ex",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: "Choisir Puissance Génétique, 2 étoiles · autres Pokémon",
+      exact: true,
+    }),
+  ).toBeVisible();
+  const saved = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("pocket-favorites:v1")!),
+  );
+  expect(saved.selections["set|a1|☆☆:rainbow"]).toBe("a1-274");
+  expect(saved.top).toEqual(old.top);
+  expect(saved.absolute).toBe(old.absolute);
+  await page
+    .getByRole("button", { name: "Type × Rareté", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", {
+      name: "Modifier Feu, 2 étoiles · arc-en-ciel, Sulfura ex",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Exporter", exact: true }).click();
+  const dlPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: /^Paysage/ }).click();
+  const dl = await dlPromise;
+  const { readFile } = await import("node:fs/promises");
+  const png = await readFile((await dl.path())!);
+  expect(png.readUInt32BE(16)).toBe(2400);
   await expect(page.getByRole("status")).not.toContainText("indisponible");
 });

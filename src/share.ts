@@ -1,4 +1,10 @@
-import { cardImageUrl, type Card, type Collection } from "./model";
+import {
+  cardCategory,
+  rarityShortName,
+  cardImageUrl,
+  type Card,
+  type Collection,
+} from "./model";
 import { AXES, computeProfile } from "./personality.mjs";
 import { download, loadImage } from "./export";
 function wrap(
@@ -132,7 +138,12 @@ export async function exportResultPNG(cards: Card[], collection: Collection) {
         ctx.fillText(card.name, x, y + ih + 35, cw);
         ctx.fillStyle = "#6c7f62";
         ctx.font = '20px "Instrument Sans"';
-        ctx.fillText(card.id.toUpperCase(), x, y + ih + 65, cw);
+        ctx.fillText(
+          `${card.id.toUpperCase()}${card.rarity === "☆☆" ? " · " + rarityShortName(cardCategory(card)) : ""}`,
+          x,
+          y + ih + 65,
+          cw,
+        );
         const rank = collection.top.indexOf(card.id);
         if (card.id === collection.absolute || rank >= 0) {
           ctx.fillStyle = "#56774b";

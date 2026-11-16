@@ -1,4 +1,5 @@
 import { isEligibleCard } from "./eligibility.mjs";
+import { cardCategory } from "./categories.mjs";
 export const STORAGE_KEY = "pocket-favorites:v1";
 export function parseCollection(input, cards) {
   if (
@@ -13,25 +14,35 @@ export function parseCollection(input, cards) {
     throw Error("Ce fichier n’est pas une sauvegarde Pocket Favorites v1.");
   const byId = new Map(cards.filter(isEligibleCard).map((c) => [c.id, c]));
   const selections = {};
-  let removed = 0;
+  let removed = 0,
+    migrated = 0;
+  const entries = [];
   for (const [key, id] of Object.entries(input.selections)) {
-    const c = byId.get(id);
-    const [mode, row, rarity, ...extra] = key.split("|");
+    const c = byId.get(id),
+      [mode, row, rarity, ...extra] = key.split("|");
     if (
       c &&
       !extra.length &&
       (mode === "set" ? c.set === row : mode === "type" && c.type === row) &&
-      c.rarity === rarity
-    )
-      selections[key] = id;
-    else removed++;
+      (cardCategory(c) === rarity || (rarity === "☆☆" && c.rarity === "☆☆"))
+    ) {
+      const canonical = `${mode}|${row}|${cardCategory(c)}`;
+      entries.push({ key, canonical, id });
+      if (canonical !== key) migrated++;
+    } else removed++;
   }
+  // An explicit new-category choice takes precedence over a colliding legacy slot.
+  entries.sort(
+    (a, b) => Number(a.key === a.canonical) - Number(b.key === b.canonical),
+  );
+  for (const e of entries) selections[e.canonical] = e.id;
   const selected = new Set(Object.values(selections));
   const top = [...new Set(input.top)]
     .filter((id) => selected.has(id))
     .slice(0, 10);
   const absolute = selected.has(input.absolute) ? input.absolute : null;
-  const winners = {};
+  const winners = {},
+    winnerEntries = [];
   if (input.winners && typeof input.winners === "object")
     for (const [key, id] of Object.entries(input.winners)) {
       const c = byId.get(id),
@@ -44,11 +55,24 @@ export function parseCollection(input, cards) {
           ? c.set === value
           : kind === "type"
             ? c.type === value
-            : kind === "rarity" && c.rarity === value)
-      )
-        winners[key] = id;
+            : kind === "rarity" &&
+              (cardCategory(c) === value ||
+                (value === "☆☆" && c.rarity === "☆☆")))
+      ) {
+        const canonical = kind === "rarity" ? `rarity|${cardCategory(c)}` : key;
+        winnerEntries.push({ key, canonical, id });
+        if (canonical !== key) migrated++;
+      }
     }
-  return { value: { version: 1, selections, top, absolute, winners }, removed };
+  winnerEntries.sort(
+    (a, b) => Number(a.key === a.canonical) - Number(b.key === b.canonical),
+  );
+  for (const e of winnerEntries) winners[e.canonical] = e.id;
+  return {
+    value: { version: 1, selections, top, absolute, winners },
+    removed,
+    migrated,
+  };
 }
 export function cleanCollection(collection, cards) {
   return parseCollection(collection, cards).value;

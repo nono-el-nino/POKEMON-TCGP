@@ -80,3 +80,9 @@ Code de cette première version et données v5 : **AGPL-3.0-or-later** (voir `LI
 Les données v5 de PocketDecks sont sous AGPL ; la référence flibustier est MIT, les noms PokéAPI BSD-3-Clause. Les notices complètes et licences des polices/icônes sont dans `public/licenses/`, également inclus dans `dist/`.
 
 **La licence du dataset ne couvre pas les illustrations Pokémon.** Elles restent la propriété de Nintendo, Creatures Inc., GAME FREAK Inc. et DeNA. Le dépôt source les reproduit à titre de référence, sans licence générale de redistribution ou d’exploitation commerciale. Cette application n’est ni affiliée ni approuvée par les ayants droit. Avant une diffusion publique ou commerciale, vérifier les conditions applicables aux illustrations et aux exports. Le workflow de publication est fourni ; la mise en ligne dépend de l’activation de GitHub Pages dans les paramètres du dépôt.
+
+## Catégories deux étoiles
+
+Les 524 impressions deux étoiles ont désormais trois cases indépendantes dans chaque matrice : **autres Pokémon** (Full Art et Shiny Full Art), **arc-en-ciel** (Special Illustration Art / SAR) et **Dresseurs** (prioritaires sur le style d’illustration). Le classement utilise les métadonnées de chaque impression, jamais son seul nom ou une estimation des couleurs. La rareté officielle `☆☆` reste intacte dans le catalogue ; `src/categories.mjs` fournit les clés de sélection `☆☆`, `☆☆:rainbow` et `☆☆:trainer`.
+
+La distinction s’applique aux galeries, aux filtres, aux résumés et aux PNG. Les sauvegardes et imports v1 sont migrés selon la carte réellement choisie : une ancienne case `☆☆` contenant un arc-en-ciel ou un Dresseur est déplacée vers sa nouvelle catégorie, ainsi que le favori de rareté correspondant. Top 10, favori absolu et scores de profil sont conservés. Une case déjà enregistrée avec sa nouvelle clé est prioritaire en cas de collision avec une ancienne clé dans un fichier importé.

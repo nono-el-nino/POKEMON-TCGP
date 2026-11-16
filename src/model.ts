@@ -1,3 +1,4 @@
+import { cardCategory } from "./categories.mjs";
 export type Card = {
   id: string;
   name: string;
@@ -86,22 +87,13 @@ export const typeColors: Record<string, string> = {
   Colorless: "#b6afa3",
   Trainer: "#809a97",
 };
-export const standardRarities = [
-  "◊◊◊◊",
-  "☆",
-  "☆☆",
-  "☆☆☆",
-  "Crown Rare",
-  "Promo",
-];
-export const rarityLabel = (r: string) =>
-  r === "Crown Rare" ? "♛" : r === "Promo" ? "P" : r;
-export const rarityName = (r: string) =>
-  r === "Crown Rare"
-    ? "Couronne"
-    : r === "Promo"
-      ? "Promotion"
-      : `${r.length} ${r.startsWith("◊") ? "diamant" : "étoile"}${r.length > 1 ? "s" : ""}`;
+export {
+  cardCategory,
+  standardRarities,
+  rarityLabel,
+  rarityName,
+  rarityShortName,
+} from "./categories.mjs";
 export const slotKey = (mode: Mode, row: string, rarity: string) =>
   `${mode}|${row}|${rarity}`;
 export const matchesSlot = (card: Card, key: string) => {
@@ -109,7 +101,7 @@ export const matchesSlot = (card: Card, key: string) => {
   return (
     (mode === "set"
       ? card.set === row
-      : mode === "type" && card.type === row) && card.rarity === rarity
+      : mode === "type" && card.type === row) && cardCategory(card) === rarity
   );
 };
 

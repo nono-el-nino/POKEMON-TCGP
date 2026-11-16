@@ -3507,3 +3507,17 @@ footer .text-button,
     text-align: left;
   }
 }
+/* Rainbow color is a functional rarity marker, backed by an explicit label. */
+.rarity-heading.rainbow b {
+  background: linear-gradient(100deg, #af7661, #8f924a, #598d80, #8878a4);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+.rarity-heading.rainbow span {
+  color: #67587b;
+}
+.card-category-label {
+  font-weight: 600;
+  color: #557048 !important;
+}

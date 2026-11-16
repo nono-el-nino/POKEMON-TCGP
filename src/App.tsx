@@ -37,6 +37,8 @@ import {
 } from "lucide-react";
 import {
   cardImageUrl,
+  cardCategory,
+  rarityShortName,
   EMPTY,
   rarityLabel,
   rarityName,
@@ -119,7 +121,7 @@ function CardImage({ card, eager = false }: { card: Card; eager?: boolean }) {
   ) : (
     <img
       src={cardImageUrl(card)}
-      alt={`${card.name} — ${card.id.toUpperCase()}, ${rarityName(card.rarity)}`}
+      alt={`${card.name} — ${card.id.toUpperCase()}, ${rarityName(cardCategory(card))}`}
       loading={eager ? "eager" : "lazy"}
       decoding="async"
       onError={() => setFailed(true)}
@@ -157,7 +159,9 @@ function App() {
     setLoadError(false);
     Promise.all(
       ["catalog.json", "profiles.json"].map((file) =>
-        fetch(`${import.meta.env.BASE_URL}data/${file}`, { cache: "no-cache" }).then((r) => {
+        fetch(`${import.meta.env.BASE_URL}data/${file}`, {
+          cache: "no-cache",
+        }).then((r) => {
           if (!r.ok) throw Error();
           return r.json();
         }),
@@ -201,6 +205,10 @@ function App() {
             setLegacyBackup(
               localStorage.getItem(STORAGE_KEY + ":before-rarity-filter"),
             );
+            if (result.migrated && !result.removed)
+              setToast(
+                `${result.migrated} choix deux étoiles déplacé(s) dans leur nouvelle catégorie. Vos favoris sont conservés.`,
+              );
             if (result.removed)
               setToast(
                 `${result.removed} ancien(s) choix exclu(s) de la sélection EX et plus. Une sauvegarde reste téléchargeable dans Mes favoris.`,
@@ -248,8 +256,8 @@ function App() {
     const map = new Map<string, Card[]>();
     for (const c of cards)
       for (const key of [
-        slotKey("set", c.set, c.rarity),
-        slotKey("type", c.type, c.rarity),
+        slotKey("set", c.set, cardCategory(c)),
+        slotKey("type", c.type, cardCategory(c)),
       ]) {
         if (!map.has(key)) map.set(key, []);
         map.get(key)!.push(c);
@@ -258,9 +266,11 @@ function App() {
   }, [cards]);
   const rarities = useMemo(
     () => [
-      ...standardRarities.filter((r) => cards.some((c) => c.rarity === r)),
+      ...standardRarities.filter((r) =>
+        cards.some((c) => cardCategory(c) === r),
+      ),
       ...new Set(
-        cards.map((c) => c.rarity).filter((r) => !standardRarities.includes(r)),
+        cards.map(cardCategory).filter((r) => !standardRarities.includes(r)),
       ),
     ],
     [cards],
@@ -276,7 +286,7 @@ function App() {
     (c) =>
       (!setFilter || c.set === setFilter) &&
       (!typeFilter || c.type === typeFilter) &&
-      (!rarityFilter || c.rarity === rarityFilter) &&
+      (!rarityFilter || cardCategory(c) === rarityFilter) &&
       `${c.name} ${c.englishName} ${c.id}`
         .toLocaleLowerCase("fr")
         .includes(query.toLocaleLowerCase("fr")),
@@ -491,7 +501,7 @@ function App() {
           ? c.set
           : summaryGroup === "type"
             ? c.type
-            : c.rarity;
+            : cardCategory(c);
       const key = `${summaryGroup}|${value}`;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(c);
@@ -861,11 +871,11 @@ function App() {
                     <div>VOTRE {mode === "set" ? "EXTENSION" : "TYPE"}</div>
                     {visibleRarities.map((r) => (
                       <div
-                        className={`rarity-heading ${r === "Crown Rare" ? "gold" : ""}`}
+                        className={`rarity-heading ${r === "Crown Rare" ? "gold" : ""} ${r === "☆☆:rainbow" ? "rainbow" : ""}`}
                         key={r}
                       >
                         <b>{rarityLabel(r)}</b>
-                        <span>{rarityName(r)}</span>
+                        <span>{rarityShortName(r)}</span>
                       </div>
                     ))}
                   </div>
@@ -955,7 +965,7 @@ function App() {
                                       >
                                         <span className="mobile-rarity">
                                           {rarityLabel(r)}{" "}
-                                          <small>{rarityName(r)}</small>
+                                          <small>{rarityShortName(r)}</small>
                                         </span>
                                         {count ? (
                                           <button
@@ -1423,9 +1433,13 @@ function App() {
             </div>
             <div className="card-metadata">
               <strong>
-                {zoom.id.toUpperCase()} <span>{rarityLabel(zoom.rarity)}</span>
+                {zoom.id.toUpperCase()}{" "}
+                <span>{rarityLabel(cardCategory(zoom))}</span>
               </strong>
               <p>{sets.find((s) => s.id === zoom.set)?.name}</p>
+              <p className="card-category-label">
+                {rarityName(cardCategory(zoom))}
+              </p>
               <p>
                 {typeNames[zoom.type] || zoom.type} ·{" "}
                 {zoom.category === "Trainer" ? "Dresseur" : "Pokémon"}
@@ -1461,7 +1475,7 @@ function App() {
                       );
                       return c ? (
                         <button key={c.id} onClick={() => setZoom(c)}>
-                          {c.id.toUpperCase()} · {rarityLabel(c.rarity)}
+                          {c.id.toUpperCase()} · {rarityLabel(cardCategory(c))}
                         </button>
                       ) : (
                         <span key={`${v.set_code}-${v.id}`}>
@@ -1596,6 +1610,14 @@ function App() {
                 compte n’est nécessaire.
               </li>
             </ol>
+            <h3>Trois catégories deux étoiles</h3>
+            <p>
+              Les arc-en-ciel (illustrations spéciales SAR), les autres Pokémon
+              deux étoiles (Full Art et Shiny Full Art) et les Dresseurs deux
+              étoiles ont chacun leurs cases. La rareté officielle reste deux
+              étoiles ; les anciens choix sont automatiquement placés dans la
+              bonne catégorie.
+            </p>
             <h3>Des données traçables</h3>
             <p>
               {cards.length.toLocaleString("fr-FR")} impressions · {sets.length}{" "}
@@ -1718,7 +1740,7 @@ function FavoriteGrid({
           <div className="favorite-caption">
             <h3>{c.name}</h3>
             <span>
-              {c.id.toUpperCase()} <b>{rarityLabel(c.rarity)}</b>
+              {c.id.toUpperCase()} <b>{rarityLabel(cardCategory(c))}</b>
             </span>
           </div>
           <div className="favorite-actions">

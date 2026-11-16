@@ -3,6 +3,8 @@ import {
   type Expansion,
   type Mode,
   cardImageUrl,
+  cardCategory,
+  rarityShortName,
   rarityLabel,
   rarityName,
   standardRarities,
@@ -53,9 +55,9 @@ export async function exportPNG(
       : typeNames[row] || row;
   const rows = [...new Set(entries.map((e) => e.key.split("|")[1]))];
   const rarities = [
-    ...standardRarities.filter((r) => cards.some((c) => c.rarity === r)),
+    ...standardRarities.filter((r) => cards.some((c) => cardCategory(c) === r)),
     ...new Set(
-      cards.map((c) => c.rarity).filter((r) => !standardRarities.includes(r)),
+      cards.map(cardCategory).filter((r) => !standardRarities.includes(r)),
     ),
   ];
   let missing = 0;
@@ -142,7 +144,7 @@ export async function exportPNG(
         ctx.font = '26px "Instrument Sans"';
         ctx.fillText(rarityLabel(r), x + cw / 2, 220, cw);
         ctx.font = '16px "Instrument Sans"';
-        ctx.fillText(rarityName(r), x + cw / 2, 248, cw);
+        ctx.fillText(rarityShortName(r), x + cw / 2, 248, cw);
       });
       ctx.textAlign = "left";
       for (let rowIndex = 0; rowIndex < pageRows.length; rowIndex++) {
@@ -217,7 +219,7 @@ export async function exportPNG(
         ctx.fillText(e.card.name, x, y + ih + 30, cw);
         ctx.font = '18px "Instrument Sans"';
         ctx.fillText(
-          `${e.card.id.toUpperCase()} · ${rarityLabel(e.card.rarity)}`,
+          `${e.card.id.toUpperCase()} · ${rarityLabel(cardCategory(e.card))} ${e.card.rarity === "☆☆" ? rarityShortName(cardCategory(e.card)) : ""}`,
           x,
           y + ih + 58,
           cw,

@@ -1,12 +1,14 @@
 import {
   cardCategory,
   rarityShortName,
+  rarityLabel,
   cardImageUrl,
   type Card,
   type Collection,
 } from "./model";
 import { AXES, computeProfile } from "./personality.mjs";
 import { download, loadImage } from "./export";
+import { getFinale } from "./finale.mjs";
 function wrap(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -32,7 +34,8 @@ export async function exportResultPNG(cards: Card[], collection: Collection) {
   if (!result?.profile)
     throw Error("Choisissez une carte avant de partager votre résultat.");
   await document.fonts.ready;
-  const priority = [collection.absolute, ...collection.top].filter(Boolean);
+  const finale = getFinale(cards, collection.winners, collection.absolute);
+  const priority = [finale.ultimate?.id, ...collection.top].filter(Boolean);
   const ordered = [...new Map(cards.map((c) => [c.id, c])).values()].sort(
     (a, b) => {
       const ai = priority.indexOf(a.id),
@@ -52,10 +55,16 @@ export async function exportResultPNG(cards: Card[], collection: Collection) {
     ch = ih + 108,
     perPage = 24,
     pages = Math.ceil(ordered.length / perPage);
-  let missing = 0;
+  const missingIds = new Set<string>();
+  const imageCache = new Map<string, Promise<HTMLImageElement>>();
+  const getImage = (card: Card) => {
+    if (!imageCache.has(card.id))
+      imageCache.set(card.id, loadImage(cardImageUrl(card)));
+    return imageCache.get(card.id)!;
+  };
   for (let page = 0; page < pages; page++) {
     const group = ordered.slice(page * perPage, (page + 1) * perPage),
-      h = Math.max(1500, 850 + Math.ceil(group.length / cols) * ch + 100);
+      h = Math.max(1500, 1310 + Math.ceil(group.length / cols) * ch + 100);
     const canvas = document.createElement("canvas");
     canvas.width = w;
     canvas.height = h;
@@ -104,12 +113,74 @@ export async function exportResultPNG(cards: Card[], collection: Collection) {
     });
     ctx.fillStyle = "#202625";
     ctx.font = 'bold 38px "Bricolage Grotesque"';
+    ctx.fillText("Mon podium par rareté.", pad, 790);
+    ctx.font = '30px "Instrument Sans"';
+    ctx.fillStyle = "#7d6936";
+    ctx.fillText(
+      finale.ultimate
+        ? `Ma préférée ultime : ${finale.ultimate.name} · ${finale.ultimate.id.toUpperCase()}`
+        : finale.ready
+          ? "Ma préférée ultime : à choisir parmi les gagnantes"
+          : `Finale à ouvrir · ${finale.unresolved} rareté(s) à départager`,
+      pad,
+      847,
+      w - pad * 2,
+    );
+    const groupWidth = (w - pad * 2) / finale.groups.length;
+    await Promise.all(
+      finale.groups.map(async (g, i) => {
+        const x = pad + i * groupWidth + groupWidth / 2,
+          iw = Math.min(145, groupWidth * 0.65),
+          ih = (iw * 512) / 367;
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#647550";
+        ctx.font = 'bold 22px "Instrument Sans"';
+        ctx.fillText(
+          `${rarityLabel(g.key)} · ${rarityShortName(g.key)}`,
+          x,
+          900,
+          groupWidth - 12,
+        );
+        if (g.champion) {
+          try {
+            const image = await getImage(g.champion);
+            ctx.drawImage(image, x - iw / 2, 920, iw, ih);
+          } catch {
+            missingIds.add(g.champion.id);
+            ctx.fillStyle = "#e3e8d9";
+            ctx.fillRect(x - iw / 2, 920, iw, ih);
+          }
+          if (g.champion.id === finale.ultimate?.id) {
+            ctx.strokeStyle = "#b49b4e";
+            ctx.lineWidth = 6;
+            ctx.strokeRect(x - iw / 2 - 5, 915, iw + 10, ih + 10);
+          }
+          ctx.textAlign = "center";
+          ctx.fillStyle = "#202625";
+          ctx.font = 'bold 20px "Instrument Sans"';
+          ctx.fillText(g.champion.name, x, 1155, groupWidth - 12);
+          ctx.fillStyle = "#7c8a6a";
+          ctx.font = '18px "Instrument Sans"';
+          ctx.fillText(g.champion.id.toUpperCase(), x, 1183, groupWidth - 12);
+        } else {
+          ctx.fillStyle = "#eceee3";
+          ctx.fillRect(x - iw / 2, 920, iw, ih);
+          ctx.textAlign = "center";
+          ctx.fillStyle = "#8b825e";
+          ctx.font = '18px "Instrument Sans"';
+          ctx.fillText("À départager", x, 1010, iw - 8);
+        }
+      }),
+    );
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#202625";
+    ctx.font = 'bold 38px "Bricolage Grotesque"';
     ctx.fillText(
       page === 0
         ? "Les cartes qui me ressemblent."
         : "La suite de mes coups de cœur.",
       pad,
-      790,
+      1250,
     );
     await Promise.all(
       group.map(async (card, i) => {
@@ -117,11 +188,11 @@ export async function exportResultPNG(cards: Card[], collection: Collection) {
           items = Math.min(cols, group.length - row * cols),
           offset = ((cols - items) * (cw + gap)) / 2,
           x = pad + offset + (i % cols) * (cw + gap),
-          y = 850 + row * ch;
+          y = 1310 + row * ch;
         try {
-          ctx.drawImage(await loadImage(cardImageUrl(card)), x, y, cw, ih);
+          ctx.drawImage(await getImage(card), x, y, cw, ih);
         } catch {
-          missing++;
+          missingIds.add(card.id);
           ctx.fillStyle = "#e2e7dc";
           ctx.fillRect(x, y, cw, ih);
           ctx.fillStyle = "#5b7051";
@@ -139,17 +210,17 @@ export async function exportResultPNG(cards: Card[], collection: Collection) {
         ctx.fillStyle = "#6c7f62";
         ctx.font = '20px "Instrument Sans"';
         ctx.fillText(
-          `${card.id.toUpperCase()}${card.rarity === "☆☆" ? " · " + rarityShortName(cardCategory(card)) : ""}`,
+          `${card.id.toUpperCase()}${["☆", "☆☆"].includes(card.rarity) ? " · " + rarityShortName(cardCategory(card)) : ""}`,
           x,
           y + ih + 65,
           cw,
         );
         const rank = collection.top.indexOf(card.id);
-        if (card.id === collection.absolute || rank >= 0) {
+        if (card.id === finale.ultimate?.id || rank >= 0) {
           ctx.fillStyle = "#56774b";
           ctx.font = 'bold 18px "Instrument Sans"';
           ctx.fillText(
-            `${card.id === collection.absolute ? "Favori absolu" : ""}${card.id === collection.absolute && rank >= 0 ? " · " : ""}${rank >= 0 ? "Top 10 · n° " + (rank + 1) : ""}`,
+            `${card.id === finale.ultimate?.id ? "Préférée ultime" : ""}${card.id === finale.ultimate?.id && rank >= 0 ? " · " : ""}${rank >= 0 ? "Top 10 · n° " + (rank + 1) : ""}`,
             x,
             y + ih + 92,
             cw,
@@ -171,5 +242,5 @@ export async function exportResultPNG(cards: Card[], collection: Collection) {
     if (!blob) throw Error("La création du PNG a échoué.");
     download(blob, `pocket-favorites-resultat-${page + 1}.png`);
   }
-  return { pages, missing };
+  return { pages, missing: missingIds.size };
 }

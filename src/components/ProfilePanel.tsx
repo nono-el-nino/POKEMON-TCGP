@@ -101,7 +101,7 @@ export default function ProfilePanel({
           <p>
             La moyenne donne le même poids à chaque impression distincte. Une
             carte présente dans les deux matrices compte une seule fois ; le Top
-            10 et le favori absolu ne modifient pas les notes. Les deux
+            10 et la préférée ultime ne modifient pas les notes. Les deux
             dimensions les plus hautes, dans l’ordre, déterminent l’un des 12
             profils. En cas d’égalité exacte, l’ordre fixe est Douceur, Énergie,
             Mystère, Éclat. Le résultat reste une tendance provisoire avant 3

@@ -71,7 +71,7 @@ test("desktop selection, independent modes, persistence, ranking and JSON export
     .click();
   await page
     .getByRole("button", {
-      name: "Désigner Bulbizarre a1-227 favori absolu",
+      name: "Choisir Bulbizarre a1-227 comme préférée ultime",
       exact: true,
     })
     .click();
@@ -361,17 +361,16 @@ test("rarity filter excludes common cards and migrates legacy choices with a dow
     absolute: "a1-001",
     winners: {},
   };
-  await page.addInitScript(
-    (value) =>
-      localStorage.setItem("pocket-favorites:v1", JSON.stringify(value)),
-    legacy,
-  );
+  await page.addInitScript((value) => {
+    if (!localStorage.getItem("pocket-favorites:v1"))
+      localStorage.setItem("pocket-favorites:v1", JSON.stringify(value));
+  }, legacy);
   await page.goto("/");
   await expect(
     page
       .getByRole("combobox", { name: "Filtrer par rareté", exact: true })
       .locator("option"),
-  ).toHaveCount(9);
+  ).toHaveCount(10);
   await expect(
     page.getByRole("button", {
       name: "Choisir Puissance Génétique, 1 diamant",
@@ -421,11 +420,10 @@ test("profile uses unique cards across modes and downloads an illustrated result
     absolute: "a1-280",
     winners: {},
   };
-  await page.addInitScript(
-    (value) =>
-      localStorage.setItem("pocket-favorites:v1", JSON.stringify(value)),
-    value,
-  );
+  await page.addInitScript((value) => {
+    if (!localStorage.getItem("pocket-favorites:v1"))
+      localStorage.setItem("pocket-favorites:v1", JSON.stringify(value));
+  }, value);
   await page.goto("/");
   await page
     .getByRole("navigation")
@@ -636,11 +634,10 @@ test("legacy rainbow choices move to the rainbow cell without losing top 10 or a
     absolute: "a1-274",
     winners: { "rarity|☆☆": "a1-274" },
   };
-  await page.addInitScript(
-    (value) =>
-      localStorage.setItem("pocket-favorites:v1", JSON.stringify(value)),
-    old,
-  );
+  await page.addInitScript((value) => {
+    if (!localStorage.getItem("pocket-favorites:v1"))
+      localStorage.setItem("pocket-favorites:v1", JSON.stringify(value));
+  }, old);
   await page.goto("/");
   await expect(
     page.getByRole("button", {
@@ -676,5 +673,166 @@ test("legacy rainbow choices move to the rainbow cell without losing top 10 or a
   const { readFile } = await import("node:fs/promises");
   const png = await readFile((await dl.path())!);
   expect(png.readUInt32BE(16)).toBe(2400);
+  await expect(page.getByRole("status")).not.toContainText("indisponible");
+});
+test("one-star shiny galleries are separate and legacy shiny choices move to the shiny cell", async ({
+  page,
+}) => {
+  const old = {
+    version: 1,
+    selections: { "set|a2b|☆": "a2b-097" },
+    top: ["a2b-097"],
+    absolute: "a2b-097",
+    winners: { "rarity|☆": "a2b-097" },
+  };
+  await page.addInitScript((value) => {
+    if (!localStorage.getItem("pocket-favorites:v1"))
+      localStorage.setItem("pocket-favorites:v1", JSON.stringify(value));
+  }, old);
+  await page.goto("/");
+  await expect(
+    page
+      .getByRole("combobox", { name: "Filtrer par rareté", exact: true })
+      .locator("option"),
+  ).toHaveCount(10);
+  await page
+    .getByRole("button", { name: "Type × Rareté", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Choisir Plante, 1 étoile", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Choisir Aspicot a2b-097", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Fermer", exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: "Choisir Plante, 1 étoile · chromatiques",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Choisir Aspicot a2b-097", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: "Choisir Bulbizarre a1-227",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Choisir Aspicot a2b-097", exact: true })
+    .click();
+  const saved = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("pocket-favorites:v1")!),
+  );
+  expect(saved.selections["set|a2b|☆:shiny"]).toBe("a2b-097");
+  expect(saved.top).toEqual(["a2b-097"]);
+  expect(saved.absolute).toBe("a2b-097");
+});
+test("rarity playoffs open the final only after each rarity is resolved and changing a champion requires reconfirming the ultimate", async ({
+  page,
+}) => {
+  const value = {
+    version: 1,
+    selections: {
+      "set|a1|☆": "a1-227",
+      "type|Grass|☆": "a1-228",
+      "set|a2b|☆:shiny": "a2b-097",
+      "set|a1|☆☆:rainbow": "a1-274",
+    },
+    top: [],
+    absolute: null,
+    winners: {},
+  };
+  await page.addInitScript((value) => {
+    if (!localStorage.getItem("pocket-favorites:v1"))
+      localStorage.setItem("pocket-favorites:v1", JSON.stringify(value));
+  }, value);
+  await page.goto("/");
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: /Mes favoris/ })
+    .click();
+  await expect(page.locator(".finale-progress")).toHaveText(
+    "2/3 raretés départagées",
+  );
+  await expect(
+    page.getByRole("button", {
+      name: "Choisir Sulfura ex a1-274 comme préférée ultime",
+      exact: true,
+    }),
+  ).toBeDisabled();
+  const group = page.locator(".rarity-playoff").filter({
+    has: page.locator("summary strong").getByText("1 étoile", { exact: true }),
+  });
+  await group.locator("summary").click();
+  await group
+    .getByRole("button", {
+      name: "Élire Ortide a1-228 en 1 étoile",
+      exact: true,
+    })
+    .click();
+  await expect(page.locator(".finale-progress")).toHaveText(
+    "3/3 raretés départagées",
+  );
+  await expect(page.locator(".ultimate-candidates article")).toHaveCount(3);
+  await expect(
+    page.getByRole("button", {
+      name: "Choisir Bulbizarre a1-227 comme préférée ultime",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", {
+      name: "Choisir Sulfura ex a1-274 comme préférée ultime",
+      exact: true,
+    })
+    .click();
+  await expect(page.locator(".ultimate-result")).toContainText("Sulfura ex");
+  await group
+    .getByRole("button", {
+      name: "Élire Bulbizarre a1-227 en 1 étoile",
+      exact: true,
+    })
+    .click();
+  await expect(page.locator(".ultimate-result")).toHaveCount(0);
+  let saved = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("pocket-favorites:v1")!),
+  );
+  expect(saved.absolute).toBeNull();
+  expect(saved.previousAbsolute).toBe("a1-274");
+  await page
+    .getByRole("button", {
+      name: "Choisir Aspicot a2b-097 comme préférée ultime",
+      exact: true,
+    })
+    .click();
+  saved = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("pocket-favorites:v1")!),
+  );
+  expect(saved.absolute).toBe("a2b-097");
+  expect(saved.previousAbsolute).toBeUndefined();
+  await page.reload();
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: /Mes favoris/ })
+    .click();
+  await expect(page.locator(".ultimate-result")).toContainText("Aspicot");
+  await page.setViewportSize({ width: 320, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  const promise = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Télécharger mon résultat PNG", exact: true })
+    .click();
+  const dl = await promise;
+  const { readFile } = await import("node:fs/promises");
+  const png = await readFile((await dl.path())!);
+  expect(png.readUInt32BE(16)).toBe(2400);
+  expect(png.length).toBeGreaterThan(100000);
   await expect(page.getByRole("status")).not.toContainText("indisponible");
 });

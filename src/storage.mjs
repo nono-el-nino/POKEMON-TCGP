@@ -1,3 +1,4 @@
+import { getFinale } from "./finale.mjs";
 import { isEligibleCard } from "./eligibility.mjs";
 import { cardCategory } from "./categories.mjs";
 export const STORAGE_KEY = "pocket-favorites:v1";
@@ -24,7 +25,8 @@ export function parseCollection(input, cards) {
       c &&
       !extra.length &&
       (mode === "set" ? c.set === row : mode === "type" && c.type === row) &&
-      (cardCategory(c) === rarity || (rarity === "☆☆" && c.rarity === "☆☆"))
+      (cardCategory(c) === rarity ||
+        (["☆", "☆☆"].includes(rarity) && c.rarity === rarity))
     ) {
       const canonical = `${mode}|${row}|${cardCategory(c)}`;
       entries.push({ key, canonical, id });
@@ -40,7 +42,7 @@ export function parseCollection(input, cards) {
   const top = [...new Set(input.top)]
     .filter((id) => selected.has(id))
     .slice(0, 10);
-  const absolute = selected.has(input.absolute) ? input.absolute : null;
+  const formerAbsolute = selected.has(input.absolute) ? input.absolute : null;
   const winners = {},
     winnerEntries = [];
   if (input.winners && typeof input.winners === "object")
@@ -57,7 +59,7 @@ export function parseCollection(input, cards) {
             ? c.type === value
             : kind === "rarity" &&
               (cardCategory(c) === value ||
-                (value === "☆☆" && c.rarity === "☆☆")))
+                (["☆", "☆☆"].includes(value) && c.rarity === value)))
       ) {
         const canonical = kind === "rarity" ? `rarity|${cardCategory(c)}` : key;
         winnerEntries.push({ key, canonical, id });
@@ -68,8 +70,34 @@ export function parseCollection(input, cards) {
     (a, b) => Number(a.key === a.canonical) - Number(b.key === b.canonical),
   );
   for (const e of winnerEntries) winners[e.canonical] = e.id;
+  const selectedCards = [...selected].map((id) => byId.get(id));
+  // An explicitly chosen former overall favorite is also a valid preference
+  // within its own rarity, unless an explicit rarity winner says otherwise.
+  if (formerAbsolute) {
+    const c = byId.get(formerAbsolute),
+      key = `rarity|${cardCategory(c)}`;
+    if (
+      !winners[key] &&
+      selectedCards.filter((x) => cardCategory(x) === cardCategory(c)).length >
+        1
+    )
+      winners[key] = formerAbsolute;
+  }
+  const finale = getFinale(selectedCards, winners, formerAbsolute);
+  const absolute = finale.ultimate?.id || null;
+  const previousAbsolute = absolute
+    ? null
+    : formerAbsolute ||
+      (selected.has(input.previousAbsolute) ? input.previousAbsolute : null);
   return {
-    value: { version: 1, selections, top, absolute, winners },
+    value: {
+      version: 1,
+      selections,
+      top,
+      absolute,
+      winners,
+      ...(previousAbsolute ? { previousAbsolute } : {}),
+    },
     removed,
     migrated,
   };

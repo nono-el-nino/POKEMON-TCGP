@@ -55,7 +55,7 @@ Aucune clé ni aucun secret à ajouter : le déploiement utilise le jeton tempor
 - Une case est identifiée par `set|extension|rareté` ou `type|type|rareté`. Les deux matrices conservent leurs propres choix, sans inventer une préférence dans l’autre mode.
 - La liste réunit les cartes uniques choisies dans les deux matrices. Retirer une case ne supprime pas les autres occurrences ; supprimer depuis les favoris retire la carte de toutes les cases.
 - Les résumés par catégorie proposent un gagnant s’il existe un seul candidat. Plusieurs candidats demandent un arbitrage explicite.
-- Top 10 ordonné et favori absolu sont choisis manuellement. Une suppression nettoie les références obsolètes.
+- Top 10 ordonné et préférée ultime sont choisis manuellement. Une suppression nettoie les références obsolètes.
 - Comparaison assistée : tournoi séquentiel parmi les candidats filtrés, avec choix final toujours confirmé par l’utilisateur.
 - Les anciennes sauvegardes sont migrées : les choix exclus sont retirés de la sélection active, et une copie JSON antérieure reste téléchargeable dans Mes favoris.
 - Sauvegarde `localStorage` version 1 ; JSON exportable et importable. L’import fusionne les cases ; les cases du fichier remplacent les collisions. Les IDs inconnus et cases incompatibles sont rejetés et signalés. Aucun secret dans les sauvegardes.
@@ -65,7 +65,7 @@ Aucune clé ni aucun secret à ajouter : le déploiement utilise le jeton tempor
 
 Dans **Mes favoris**, quatre moyennes (Douceur, Énergie, Mystère, Éclat) déterminent une signature parmi 12. Les scores de chaque carte combinent 60 % de mesures de l’illustration réelle et 40 % d’attributs Pokémon. Chaque impression compte une fois, quel que soit le nombre de cases occupées. Aucun score n’est tiré au hasard. Les règles complètes, coefficients, égalités et limites sont documentés dans [docs/profiles.md](docs/profiles.md), ainsi que dans l’interface.
 
-Le bouton **Télécharger mon résultat PNG** crée une image de 2400 px de large avec le profil, les quatre notes et tous les favoris uniques, y compris ceux de l’autre matrice. Le Top 10 et le favori absolu sont signalés. Au-delà de 24 cartes, l’export est réparti en plusieurs images. Les exports de matrices paysage et story et le JSON complet restent disponibles via Exporter. Ce profil est une lecture ludique des goûts visuels.
+Le bouton **Télécharger mon résultat PNG** crée une image de 2400 px de large avec le profil, les quatre notes et tous les favoris uniques, y compris ceux de l’autre matrice. Le Top 10 et la préférée ultime sont signalés. Au-delà de 24 cartes, l’export est réparti en plusieurs images. Les exports de matrices paysage et story et le JSON complet restent disponibles via Exporter. Ce profil est une lecture ludique des goûts visuels.
 
 La compilation génère `public/data/profiles.json` via Sharp/libvips (dépendance de développement uniquement). Le cache est réutilisé lorsque les images, métadonnées et règles sont identiques. Aucun traitement des images ni appel de classification externe n’est nécessaire dans le navigateur.
 
@@ -85,4 +85,17 @@ Les données v5 de PocketDecks sont sous AGPL ; la référence flibustier est MI
 
 Les 524 impressions deux étoiles ont désormais trois cases indépendantes dans chaque matrice : **autres Pokémon** (Full Art et Shiny Full Art), **arc-en-ciel** (Special Illustration Art / SAR) et **Dresseurs** (prioritaires sur le style d’illustration). Le classement utilise les métadonnées de chaque impression, jamais son seul nom ou une estimation des couleurs. La rareté officielle `☆☆` reste intacte dans le catalogue ; `src/categories.mjs` fournit les clés de sélection `☆☆`, `☆☆:rainbow` et `☆☆:trainer`.
 
-La distinction s’applique aux galeries, aux filtres, aux résumés et aux PNG. Les sauvegardes et imports v1 sont migrés selon la carte réellement choisie : une ancienne case `☆☆` contenant un arc-en-ciel ou un Dresseur est déplacée vers sa nouvelle catégorie, ainsi que le favori de rareté correspondant. Top 10, favori absolu et scores de profil sont conservés. Une case déjà enregistrée avec sa nouvelle clé est prioritaire en cas de collision avec une ancienne clé dans un fichier importé.
+La distinction s’applique aux galeries, aux filtres, aux résumés et aux PNG. Les sauvegardes et imports v1 sont migrés selon la carte réellement choisie : une ancienne case `☆☆` contenant un arc-en-ciel ou un Dresseur est déplacée vers sa nouvelle catégorie, ainsi que le favori de rareté correspondant. Top 10, préférée ultime et scores de profil sont conservés. Une case déjà enregistrée avec sa nouvelle clé est prioritaire en cas de collision avec une ancienne clé dans un fichier importé.
+
+## 1 étoile chromatiques et grand podium
+
+Les **1 étoile chromatiques** (`artStyle: Shiny`) ont une catégorie indépendante `☆:shiny`, à côté des illustrations classiques `☆`. La rareté officielle et les identifiants d’illustration restent inchangés. Le classement est commun aux deux matrices, aux filtres, aux galeries et aux PNG ; les anciennes cases et gagnantes de rareté sont migrées automatiquement selon la carte choisie.
+
+Dans **Mes favoris → Le grand podium**, le niveau chapeau se déroule en deux étapes :
+
+1. Une gagnante parmi les cartes choisies de **chaque catégorie de rareté représentée**, réunies depuis les deux matrices. Une impression présente plusieurs fois est comptée une seule fois. Une catégorie avec une seule candidate se qualifie directement ; plusieurs candidates demandent un choix explicite.
+2. La **préférée ultime** est choisie explicitement parmi ces seules gagnantes. La finale reste verrouillée tant qu’une catégorie représentée n’est pas départagée. Les raretés sans aucun favori ne bloquent pas le parcours.
+
+Le Top 10 reste indépendant. Un changement du groupe de finalistes demande de confirmer à nouveau l’ultime ; l’ancien choix reste mémorisé lorsqu’il fait encore partie des favoris. Les anciennes préférées absolues sont reprises si elles restent compatibles avec le podium. Une ancienne préférée globale peut servir de gagnante de sa propre rareté, sauf si une autre gagnante de rareté a été explicitement enregistrée ; sinon l’ancien coup de cœur est gardé dans `previousAbsolute` et présenté comme à confirmer.
+
+Le PNG HD inclut le podium par rareté, son état d’avancement et la préférée ultime, en plus du profil et de tous les favoris. Le JSON contient les choix et un instantané des IDs des gagnantes et de l’ultime. Les fonctions communes sont dans `src/finale.mjs` ; la sélection de la finale n’accepte jamais une carte provenant seulement du catalogue ou du Top 10. Le profil de collectionneur conserve sa moyenne sur toutes les impressions choisies, sans pondération par les titres gagnés.

@@ -52,6 +52,7 @@ export type Collection = {
   selections: Record<string, string>;
   top: string[];
   absolute: string | null;
+  previousAbsolute?: string | null;
   winners: Record<string, string>;
 };
 export const EMPTY: Collection = {

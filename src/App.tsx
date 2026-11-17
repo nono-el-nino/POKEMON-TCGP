@@ -55,6 +55,8 @@ import { parseCollection, cleanCollection, STORAGE_KEY } from "./storage.mjs";
 import { download, exportPNG } from "./export";
 import { exportResultPNG } from "./share";
 import ProfilePanel, { ScoreBars } from "./components/ProfilePanel";
+import FinalePanel from "./components/FinalePanel";
+import { getFinale } from "./finale.mjs";
 import { isEligibleCard } from "./eligibility.mjs";
 import { computeProfile } from "./personality.mjs";
 
@@ -147,9 +149,7 @@ function App() {
     [typeFilter, setTypeFilter] = useState("");
   const [folded, setFolded] = useState<string[]>([]),
     [exporting, setExporting] = useState(false),
-    [summaryGroup, setSummaryGroup] = useState<"set" | "type" | "rarity">(
-      "set",
-    );
+    [summaryGroup, setSummaryGroup] = useState<"set" | "type">("set");
   const [legacyBackup, setLegacyBackup] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null),
@@ -207,7 +207,7 @@ function App() {
             );
             if (result.migrated && !result.removed)
               setToast(
-                `${result.migrated} choix deux étoiles déplacé(s) dans leur nouvelle catégorie. Vos favoris sont conservés.`,
+                `${result.migrated} choix déplacé(s) dans leur nouvelle catégorie. Vos favoris sont conservés.`,
               );
             if (result.removed)
               setToast(
@@ -335,13 +335,30 @@ function App() {
     setRarityFilter("");
     setTypeFilter("");
   };
+  const reconcileFinale = (old: Collection, next: Collection) => {
+    const picked = (value: Collection) =>
+      [...new Set(Object.values(value.selections))]
+        .map((id) => byId.get(id)!)
+        .filter(Boolean);
+    const before = getFinale(picked(old), old.winners, old.absolute),
+      after = getFinale(picked(next), next.winners, next.absolute);
+    const changed =
+      before.ready !== after.ready ||
+      before.champions.map((c) => c.id).join("|") !==
+        after.champions.map((c) => c.id).join("|");
+    const value =
+      changed && old.absolute
+        ? { ...next, absolute: null, previousAbsolute: old.absolute }
+        : next;
+    return cleanCollection(value, cards) as Collection;
+  };
   const choose = (key: string, id: string | null) => {
     setCollection((old) => {
       if (!old) return old;
       const selections = { ...old.selections };
       if (id) selections[key] = id;
       else delete selections[key];
-      return cleanCollection({ ...old, selections }, cards) as Collection;
+      return reconcileFinale(old, { ...old, selections });
     });
     setToast(
       id ? "Une nouvelle place dans votre collection." : "Sélection retirée.",
@@ -357,15 +374,12 @@ function App() {
   const removeCard = (id: string) =>
     setCollection((old) =>
       old
-        ? (cleanCollection(
-            {
-              ...old,
-              selections: Object.fromEntries(
-                Object.entries(old.selections).filter(([, v]) => v !== id),
-              ),
-            },
-            cards,
-          ) as Collection)
+        ? reconcileFinale(old, {
+            ...old,
+            selections: Object.fromEntries(
+              Object.entries(old.selections).filter(([, v]) => v !== id),
+            ),
+          })
         : old,
     );
   const toggleTop = (id: string) => {
@@ -382,6 +396,26 @@ function App() {
         "Votre Top 10 est complet. Retirez une carte pour lui faire une place.",
       );
   };
+  const chooseRarityWinner = (category: string, id: string | null) =>
+    setCollection((old) => {
+      if (!old) return old;
+      const winners = { ...old.winners };
+      if (id) winners[`rarity|${category}`] = id;
+      else delete winners[`rarity|${category}`];
+      return reconcileFinale(old, { ...old, winners });
+    });
+  const chooseUltimate = (id: string | null) =>
+    setCollection((old) => {
+      if (!old) return old;
+      const chosen = [...new Set(Object.values(old.selections))]
+        .map((id) => byId.get(id)!)
+        .filter(Boolean);
+      const finale = getFinale(chosen, old.winners, old.absolute);
+      if (id && (!finale.ready || !finale.champions.some((c) => c.id === id)))
+        return old;
+      const next = { ...old, absolute: id, previousAbsolute: null };
+      return cleanCollection(next, cards) as Collection;
+    });
   const importFile = async (file: File) => {
     try {
       if (file.size > 2 * 1024 * 1024) throw Error("Ce fichier dépasse 2 Mo.");
@@ -400,6 +434,7 @@ function App() {
                 10,
               ),
               absolute: value.absolute || old?.absolute,
+              previousAbsolute: value.previousAbsolute || old?.previousAbsolute,
               winners: { ...old?.winners, ...value.winners },
             },
             cards,
@@ -419,6 +454,22 @@ function App() {
           JSON.stringify(
             {
               ...collection,
+              podium: (() => {
+                const p = getFinale(
+                  selected,
+                  collection?.winners,
+                  collection?.absolute,
+                );
+                return {
+                  complete: p.ready,
+                  champions: Object.fromEntries(
+                    p.groups.flatMap((g) =>
+                      g.champion ? [[g.key, g.champion.id]] : [],
+                    ),
+                  ),
+                  ultimate: p.ultimate?.id || null,
+                };
+              })(),
               signature: {
                 ...computeProfile(selected),
                 catalogSha256: catalog?.meta.sha256,
@@ -496,12 +547,7 @@ function App() {
   const groups = useMemo(() => {
     const map = new Map<string, Card[]>();
     for (const c of selected) {
-      const value =
-        summaryGroup === "set"
-          ? c.set
-          : summaryGroup === "type"
-            ? c.type
-            : cardCategory(c);
+      const value = summaryGroup === "set" ? c.set : c.type;
       const key = `${summaryGroup}|${value}`;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(c);
@@ -853,9 +899,6 @@ function App() {
                   onRemove={removeCard}
                   onEdit={editCard}
                   onTop={toggleTop}
-                  onAbsolute={(id) =>
-                    setCollection({ ...collection, absolute: id })
-                  }
                   onStart={start}
                 />
               ) : (
@@ -1066,6 +1109,14 @@ function App() {
                 </button>
               </div>
             )}
+            <FinalePanel
+              cards={selected}
+              collection={collection}
+              onWinner={chooseRarityWinner}
+              onUltimate={chooseUltimate}
+              onZoom={setZoom}
+              onStart={start}
+            />
             <ProfilePanel
               cards={selected}
               onExport={() => void exportResult()}
@@ -1073,48 +1124,7 @@ function App() {
             />
             {selected.length > 0 && (
               <>
-                <div className="favorites-featured">
-                  <div className="absolute-card">
-                    <div>
-                      <span className="eyebrow">
-                        <Crown size={15} /> LE COUP DE CŒUR ABSOLU
-                      </span>
-                      <h2>
-                        {collection.absolute
-                          ? byId.get(collection.absolute)?.name
-                          : "La carte qui passe avant toutes les autres."}
-                      </h2>
-                      <p>
-                        {collection.absolute
-                          ? "Votre choix. Tout simplement."
-                          : "Touchez la couronne d’une carte ci-dessous pour lui offrir cette place."}
-                      </p>
-                      {collection.absolute && (
-                        <button
-                          className="text-button"
-                          onClick={() =>
-                            setCollection({ ...collection, absolute: null })
-                          }
-                        >
-                          Retirer ce titre <X size={14} />
-                        </button>
-                      )}
-                    </div>
-                    {collection.absolute ? (
-                      <button
-                        className="absolute-image"
-                        onClick={() => setZoom(byId.get(collection.absolute!)!)}
-                      >
-                        <CardImage card={byId.get(collection.absolute)!} />
-                      </button>
-                    ) : (
-                      <Crown
-                        className="empty-crown"
-                        size={82}
-                        strokeWidth={1}
-                      />
-                    )}
-                  </div>
+                <div className="favorites-featured top-only">
                   <div className="top-ten">
                     <div>
                       <span className="eyebrow">VOTRE PREMIER RANG</span>
@@ -1185,14 +1195,11 @@ function App() {
                       aria-label="Regrouper les favoris"
                       value={summaryGroup}
                       onChange={(e) =>
-                        setSummaryGroup(
-                          e.target.value as "set" | "type" | "rarity",
-                        )
+                        setSummaryGroup(e.target.value as "set" | "type")
                       }
                     >
                       <option value="set">Par extension</option>
                       <option value="type">Par type</option>
-                      <option value="rarity">Par rareté</option>
                     </select>
                   </div>
                   <div className="summary-grid">
@@ -1207,9 +1214,7 @@ function App() {
                       const label =
                         summaryGroup === "set"
                           ? sets.find((s) => s.id === value)?.name
-                          : summaryGroup === "type"
-                            ? typeNames[value]
-                            : rarityName(value);
+                          : typeNames[value];
                       return (
                         <div className="summary-item" key={key}>
                           <span>{label}</span>
@@ -1317,9 +1322,6 @@ function App() {
               onRemove={removeCard}
               onEdit={editCard}
               onTop={toggleTop}
-              onAbsolute={(id) =>
-                setCollection({ ...collection, absolute: id })
-              }
               onStart={start}
             />
           </section>
@@ -1513,8 +1515,8 @@ function App() {
             <span>
               <strong>Mon résultat · PNG HD</strong>
               <small>
-                2400 px · mon profil, ses 4 dimensions et tous mes favoris des
-                deux matrices
+                2400 px · mon podium, mon profil et tous mes favoris des deux
+                matrices
               </small>
             </span>
             <Download size={19} />
@@ -1569,7 +1571,10 @@ function App() {
           <div className="json-export">
             <div>
               <strong>La sauvegarde complète</strong>
-              <p>Matrice, Top 10, favori absolu et arbitrages. Sans images.</p>
+              <p>
+                Matrices, podium par rareté, préférée ultime et Top 10. Sans
+                images.
+              </p>
             </div>
             <button className="secondary-button" onClick={exportJSON}>
               <Download size={16} /> JSON
@@ -1601,8 +1606,8 @@ function App() {
               </li>
               <li>
                 <strong>Composez.</strong> Retrouvez vos choix dans Mes favoris.
-                Désignez explicitement votre Top 10, votre favori absolu et les
-                gagnants des catégories à départager.
+                Désignez explicitement votre Top 10, votre préférée ultime et
+                les gagnants des catégories à départager.
               </li>
               <li>
                 <strong>Emportez.</strong> Exportez les planches PNG ou
@@ -1610,6 +1615,15 @@ function App() {
                 compte n’est nécessaire.
               </li>
             </ol>
+            <h3>Les 1 étoile et le grand podium</h3>
+            <p>
+              Les 1 étoile chromatiques ont leurs propres cases, séparées des
+              illustrations classiques. Dans Mes favoris, le grand podium réunit
+              toutes vos favorites par rareté. Choisissez une gagnante dans
+              chaque rareté représentée, puis votre préférée ultime parmi ces
+              seules gagnantes. Une rareté avec une seule candidate est
+              qualifiée directement.
+            </p>
             <h3>Trois catégories deux étoiles</h3>
             <p>
               Les arc-en-ciel (illustrations spéciales SAR), les autres Pokémon
@@ -1692,7 +1706,6 @@ function FavoriteGrid({
   onRemove,
   onEdit,
   onTop,
-  onAbsolute,
   onStart,
 }: {
   cards: Card[];
@@ -1701,7 +1714,6 @@ function FavoriteGrid({
   onRemove: (id: string) => void;
   onEdit: (id: string) => void;
   onTop: (id: string) => void;
-  onAbsolute: (id: string) => void;
   onStart: () => void;
 }) {
   if (!cards.length)
@@ -1755,14 +1767,6 @@ function FavoriteGrid({
                 fill={collection.top.includes(c.id) ? "currentColor" : "none"}
               />
               <span>Top 10</span>
-            </button>
-            <button
-              className={collection.absolute === c.id ? "is-absolute" : ""}
-              aria-label={`Désigner ${c.name} ${c.id} favori absolu`}
-              aria-pressed={collection.absolute === c.id}
-              onClick={() => onAbsolute(c.id)}
-            >
-              <Crown size={18} />
             </button>
             <button
               aria-label={`Modifier la sélection ${c.name} ${c.id}`}

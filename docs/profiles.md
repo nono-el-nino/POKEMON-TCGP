@@ -4,7 +4,7 @@ Les profils décrivent des goûts de collection dans un cadre ludique. Il ne s�
 
 ## Périmètre
 
-Le catalogue conserve les impressions à **4 losanges inclus**, toutes les étoiles, les couronnes et les promotions. Les autres raretés sont exclues même lorsqu’un champ `ex` est présent. Chaque impression est identifiée par extension et numéro ; deux illustrations d’un même Pokémon restent deux cartes différentes. Les Dresseurs éligibles sont conservés.
+Le catalogue conserve les impressions à **4 losanges inclus**, toutes les étoiles, les couronnes et les promotions. Les autres raretés sont exclues même lorsqu’un champ `ex` est présent. Chaque impression est identifiée par extension et numéro ; deux illustrations d’un même Pokémon restent deux cartes différentes. Les Dresseurs éligibles sont conservés. Les 1 étoile chromatiques sont séparées des illustrations classiques ; les deux étoiles gardent leurs catégories autres Pokémon, arc-en-ciel et Dresseurs. Ces subdivisions et les titres du grand podium ne changent ni les notes par carte ni leur poids dans la moyenne.
 
 ## Données par illustration
 
@@ -65,7 +65,7 @@ Les Dresseurs gardent une base neutre. La note finale par carte est `arrondi(0,6
 1. Réunir les identifiants uniques choisis dans les deux matrices.
 2. Faire la moyenne arithmétique de leurs quatre notes entières, avec le même poids par impression.
 3. Trier les dimensions sur les sommes exactes, avant arrondi d’affichage. En cas d’égalité, utiliser Douceur, Énergie, Mystère, Éclat dans cet ordre fixe. La moyenne affichée est arrondie à un dixième.
-4. Le couple ordonné (première dimension, deuxième dimension) détermine l’un des **4 × 3 = 12** profils. Le Top 10, l’ordre de sélection et le favori absolu ne changent pas la moyenne.
+4. Le couple ordonné (première dimension, deuxième dimension) détermine l’un des **4 × 3 = 12** profils. Le Top 10, l’ordre de sélection et la préférée ultime ne changent pas la moyenne.
 5. Un résultat est indiqué comme provisoire avec moins de 3 impressions. Une différence de moins de 5 points entre les deux premières dimensions est signalée comme proche. Avec zéro carte, aucun profil n’est attribué.
 
 | Première | Deuxième | Signature      |

@@ -55,7 +55,7 @@ test("every 2-star print belongs to exactly one exhaustive group, with trainers 
     }),
     TWO_STAR_TRAINER,
   );
-  for (const c of cards.filter((c) => c.rarity !== "☆☆"))
+  for (const c of cards.filter((c) => !["☆", "☆☆"].includes(c.rarity)))
     assert.equal(cardCategory(c), c.rarity);
 });
 test("legacy slots in both modes and category winners migrate while rankings remain intact", () => {
